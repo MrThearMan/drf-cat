@@ -1,3 +1,5 @@
+from typing import Any, Callable
+
 from django.test.signals import setting_changed
 from settings_holder import SettingsHolder, reload_settings
 
@@ -26,8 +28,10 @@ class DefaultSettings(NamedTuple):
     """Pseudo random function to use for generating keys."""
     AUTH_SCHEME: str = "CAT"
     """Auth scheme to use in Authorization header."""
-    IDENTITY_KEY: str = "pk"
-    """User property to use for identifying user."""
+    VALID_CAT_HEADERS: list[str] = ["identity", "service_name", "timestamp", "valid_until"]
+    """Valid CAT headers."""
+    IDENTITY_CONVERTER: Callable[[str], Any] = str
+    """Function to convert identity value to the required type."""
 
 
 DEFAULTS = DefaultSettings()._asdict()

@@ -19,8 +19,6 @@ class DefaultSettings(NamedTuple):
     """Pseudo random function to use for generating keys."""
     AUTH_SCHEME: str = "CAT"
     """Auth scheme to use in Authorization header."""
-    IDENTITY_KEY: str = "pk"
-    """User property to use for identifying user."""
 
 
 DEFAULTS = DefaultSettings()._asdict()

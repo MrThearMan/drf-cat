@@ -1,15 +1,7 @@
-from dataclasses import dataclass
-from typing import NamedTuple
+from typing import Any, NamedTuple, Self
 
 __all__ = [
-    "AuthInfo",
     "NamedTuple",
+    "Any",
+    "Self",
 ]
-
-
-@dataclass
-class AuthInfo:
-    scheme: str
-    token: str
-    identity_key: str
-    identity_value: str

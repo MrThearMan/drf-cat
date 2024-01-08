@@ -1,11 +1,13 @@
+import datetime
 import re
 
 import pytest
 from django.core.exceptions import ImproperlyConfigured
+from django.test.client import Client
 from rest_framework.reverse import reverse
-from rest_framework.test import APIClient
 
 from cat_server.cryptography import hmac
+from cat_service.cryptography import create_cat_header
 from cat_service.setup import get_verification_key
 from tests.factories import ServiceEntityFactory, UserFactory
 from tests.helpers import use_test_client_in_service_setup
@@ -15,7 +17,7 @@ pytestmark = [
 ]
 
 
-def test_cat__get_service_verification_key(client: APIClient):
+def test_cat__get_service_verification_key(client: Client):
     service_entity = ServiceEntityFactory.create()
     verification_key = hmac(msg=service_entity.type.name)
 
@@ -23,18 +25,18 @@ def test_cat__get_service_verification_key(client: APIClient):
     url = reverse("cat_server:cat_verification_key")
     response = client.post(url, data=data)
 
-    assert dict(response.data) == {"verification_key": verification_key}
+    assert response.json() == {"verification_key": verification_key}
 
 
-def test_cat__get_service_verification_key__service_entity_missing(client: APIClient):
+def test_cat__get_service_verification_key__service_entity_missing(client: Client):
     data = {"type": "foo", "name": "bar"}
     url = reverse("cat_server:cat_verification_key")
     response = client.post(url, data=data)
 
-    assert dict(response.data) == {"detail": "Service entity of type 'foo' with name 'bar' not found."}
+    assert response.json() == {"detail": "Service entity of type 'foo' with name 'bar' not found."}
 
 
-def test_cat__get_creation_key(client: APIClient):
+def test_cat__get_creation_key(client: Client):
     user = UserFactory.create()
     client.force_login(user=user)
 
@@ -46,10 +48,10 @@ def test_cat__get_creation_key(client: APIClient):
     url = reverse("cat_server:cat_creation_key")
     response = client.post(url, data=data)
 
-    assert dict(response.data) == {"creation_key": creation_key}
+    assert response.json() == {"creation_key": creation_key}
 
 
-def test_cat__get_creation_key__service_entity_type_missing(client: APIClient):
+def test_cat__get_creation_key__service_entity_type_missing(client: Client):
     user = UserFactory.create()
     client.force_login(user=user)
 
@@ -57,15 +59,13 @@ def test_cat__get_creation_key__service_entity_type_missing(client: APIClient):
     url = reverse("cat_server:cat_creation_key")
     response = client.post(url, data=data)
 
-    assert dict(response.data) == {"detail": "Service entity type 'foo' not found."}
+    assert response.json() == {"detail": "Service entity type 'foo' not found."}
 
 
-def test_cat__authenticate_user(client: APIClient, settings):
+def test_cat__authenticate_user(client: Client, settings):
     user = UserFactory.create()
     identity = str(user.pk)
     service_entity = ServiceEntityFactory.create()
-    verification_key = hmac(msg=service_entity.type.name)
-    creation_key = hmac(msg=identity, key=verification_key)
 
     settings.CAT_SETTINGS = {
         "CAT_ROOT_KEY": "foo",
@@ -77,13 +77,86 @@ def test_cat__authenticate_user(client: APIClient, settings):
     with use_test_client_in_service_setup(client):
         get_verification_key()
 
+    cat = create_cat_header(identity=identity, service_name=service_entity.type.name)
+
     url = reverse("example")
-    response = client.get(url, HTTP_AUTHORIZATION=f"CAT {creation_key}, pk={identity}")
+    response = client.get(
+        url,
+        HTTP_AUTHORIZATION=cat,
+        HTTP_CAT_IDENTITY=identity,
+        HTTP_CAT_SERVICE_NAME=service_entity.type.name,
+    )
 
-    assert dict(response.data) == {"foo": "bar"}
+    assert response.json() == {"foo": "bar"}
 
 
-def test_cat__authenticate_user__missing_service_type(settings):
+def test_cat__authenticate_user__cat_headers_in_bytes(client: Client, settings):
+    user = UserFactory.create()
+    identity = str(user.pk)
+    service_entity = ServiceEntityFactory.create()
+
+    settings.CAT_SETTINGS = {
+        "CAT_ROOT_KEY": "foo",
+        "SERVICE_TYPE": service_entity.type.name,
+        "SERVICE_NAME": service_entity.name,
+        "VERIFICATION_KEY_URL": reverse("cat_server:cat_verification_key"),
+    }
+
+    with use_test_client_in_service_setup(client):
+        get_verification_key()
+
+    cat = create_cat_header(identity=identity, service_name=service_entity.type.name)
+
+    url = reverse("example")
+    response = client.get(
+        url,
+        HTTP_AUTHORIZATION=cat,
+        HTTP_CAT_IDENTITY=identity.encode(),
+        HTTP_CAT_SERVICE_NAME=service_entity.type.name.encode(),
+    )
+
+    assert response.json() == {"foo": "bar"}
+
+
+def test_cat__authenticate_user__extra_info(client: Client, settings):
+    user = UserFactory.create()
+    identity = str(user.pk)
+    service_entity = ServiceEntityFactory.create()
+
+    settings.CAT_SETTINGS = {
+        "CAT_ROOT_KEY": "foo",
+        "SERVICE_TYPE": service_entity.type.name,
+        "SERVICE_NAME": service_entity.name,
+        "VERIFICATION_KEY_URL": reverse("cat_server:cat_verification_key"),
+    }
+
+    with use_test_client_in_service_setup(client):
+        get_verification_key()
+
+    timestamp = datetime.datetime(2024, 1, 1).isoformat()
+    valid_until = (datetime.datetime.now() + datetime.timedelta(minutes=5)).isoformat()
+
+    cat = create_cat_header(
+        identity=identity,
+        service_name=service_entity.type.name,
+        timestamp=timestamp,
+        valid_until=valid_until,
+    )
+
+    url = reverse("example")
+    response = client.get(
+        url,
+        HTTP_AUTHORIZATION=cat,
+        HTTP_CAT_IDENTITY=identity,
+        HTTP_CAT_SERVICE_NAME=service_entity.type.name,
+        HTTP_CAT_TIMESTAMP=timestamp,
+        HTTP_CAT_VALID_UNTIL=valid_until,
+    )
+
+    assert response.json() == {"foo": "bar"}
+
+
+def test_cat__authenticate_user__missing_service_type_setting(settings):
     service_entity = ServiceEntityFactory.create()
 
     settings.CAT_SETTINGS = {
@@ -97,7 +170,7 @@ def test_cat__authenticate_user__missing_service_type(settings):
         get_verification_key()
 
 
-def test_cat__authenticate_user__missing_service_name(settings):
+def test_cat__authenticate_user__missing_service_name_setting(settings):
     service_entity = ServiceEntityFactory.create()
 
     settings.CAT_SETTINGS = {
@@ -111,7 +184,7 @@ def test_cat__authenticate_user__missing_service_name(settings):
         get_verification_key()
 
 
-def test_cat__authenticate_user__missing_verification_key_url(settings):
+def test_cat__authenticate_user__missing_verification_key_url_setting(settings):
     service_entity = ServiceEntityFactory.create()
 
     settings.CAT_SETTINGS = {
@@ -125,7 +198,7 @@ def test_cat__authenticate_user__missing_verification_key_url(settings):
         get_verification_key()
 
 
-def test_cat__authenticate_user__dont_request_new_if_set(client: APIClient, settings):
+def test_cat__authenticate_user__dont_request_new_if_set(client: Client, settings):
     service_entity = ServiceEntityFactory.create()
 
     settings.CAT_SETTINGS = {
@@ -146,7 +219,7 @@ def test_cat__authenticate_user__dont_request_new_if_set(client: APIClient, sett
     assert client.call_count == 0
 
 
-def test_cat__authenticate_user__do_request_new_if_forced(client: APIClient, settings):
+def test_cat__authenticate_user__do_request_new_if_forced(client: Client, settings):
     service_entity = ServiceEntityFactory.create()
 
     settings.CAT_SETTINGS = {
@@ -172,39 +245,27 @@ def test_cat__authenticate_user__do_request_new_if_forced(client: APIClient, set
     (
         (
             b"\xd3\x82\xe87<\xa4\x95\xd2\xe6Cu\xd3\xc8\xa0\xed\xfe",
-            "Invalid token header. Token string should not contain invalid characters.",
+            "Invalid Authorization header. Should not contain non-ASCII characters.",
         ),
         (
             "",
-            "Invalid token header. Must be of form: 'CAT <token>, pk=<identity_value>'.",
+            "Invalid Authorization header. Must be of form: 'CAT <token>'.",
         ),
         (
             "foo",
-            "Invalid token header. Must be of form: 'CAT <token>, pk=<identity_value>'.",
+            "Invalid Authorization header. Must be of form: 'CAT <token>'.",
         ),
         (
-            "foo, bar, baz",
-            "Invalid token header. Must be of form: 'CAT <token>, pk=<identity_value>'.",
+            "foo bar baz",
+            "Invalid Authorization header. Must be of form: 'CAT <token>'.",
         ),
         (
-            "foo, bar",
-            "Invalid auth token. Must be of form: 'CAT <token>'.",
-        ),
-        (
-            "Token foo, bar",
+            "Token foo",
             "Invalid auth scheme: 'TOKEN'. Accepted: 'CAT'.",
-        ),
-        (
-            "CAT foo, bar",
-            "Invalid identity. Must be of form: 'pk=<identity_value>'.",
-        ),
-        (
-            "CAT token, foo=bar",
-            "Invalid identity key: 'foo'. Accepted: 'pk'.",
         ),
     ),
 )
-def test_cat__authenticate_user__invalid_header(client: APIClient, settings, header, error):
+def test_cat__authenticate_user__invalid_header(client: Client, settings, header, error):
     service_entity = ServiceEntityFactory.create()
 
     settings.CAT_SETTINGS = {
@@ -220,15 +281,13 @@ def test_cat__authenticate_user__invalid_header(client: APIClient, settings, hea
     url = reverse("example")
     response = client.get(url, HTTP_AUTHORIZATION=header)
 
-    assert dict(response.data) == {"detail": error}
+    assert response.json() == {"detail": error}
 
 
-def test_cat__authenticate_user__invalid_header__no_verification_key(client: APIClient, settings):
+def test_cat__authenticate_user__invalid_header__no_verification_key(client: Client, settings):
     user = UserFactory.create()
     identity = str(user.pk)
     service_entity = ServiceEntityFactory.create()
-    verification_key = hmac(msg=service_entity.type.name)
-    creation_key = hmac(msg=identity, key=verification_key)
 
     settings.CAT_SETTINGS = {
         "CAT_ROOT_KEY": "foo",
@@ -238,12 +297,17 @@ def test_cat__authenticate_user__invalid_header__no_verification_key(client: API
     }
 
     url = reverse("example")
-    response = client.get(url, HTTP_AUTHORIZATION=f"CAT {creation_key}, pk={identity}")
+    response = client.get(
+        url,
+        HTTP_AUTHORIZATION="CAT foo",
+        HTTP_CAT_IDENTITY=identity,
+        HTTP_CAT_SERVICE_NAME=service_entity.type.name,
+    )
 
-    assert dict(response.data) == {"detail": "Service not set up correctly."}
+    assert response.json() == {"detail": "Service not set up correctly."}
 
 
-def test_cat__authenticate_user__invalid_token(client: APIClient, settings):
+def test_cat__authenticate_user__invalid_cat(client: Client, settings):
     user = UserFactory.create()
     identity = str(user.pk)
     service_entity = ServiceEntityFactory.create()
@@ -259,6 +323,247 @@ def test_cat__authenticate_user__invalid_token(client: APIClient, settings):
         get_verification_key()
 
     url = reverse("example")
-    response = client.get(url, HTTP_AUTHORIZATION=f"CAT foo, pk={identity}")
+    response = client.get(
+        url,
+        HTTP_AUTHORIZATION="CAT foo",
+        HTTP_CAT_IDENTITY=identity,
+        HTTP_CAT_SERVICE_NAME=service_entity.type.name,
+    )
 
-    assert dict(response.data) == {"detail": "Invalid token."}
+    assert response.json() == {"detail": "Invalid CAT."}
+
+
+def test_cat__authenticate_user__invalid_service_name(client: Client, settings):
+    user = UserFactory.create()
+    identity = str(user.pk)
+    service_entity = ServiceEntityFactory.create()
+
+    settings.CAT_SETTINGS = {
+        "CAT_ROOT_KEY": "foo",
+        "SERVICE_TYPE": service_entity.type.name,
+        "SERVICE_NAME": service_entity.name,
+        "VERIFICATION_KEY_URL": reverse("cat_server:cat_verification_key"),
+    }
+
+    with use_test_client_in_service_setup(client):
+        get_verification_key()
+
+    url = reverse("example")
+    response = client.get(
+        url,
+        HTTP_AUTHORIZATION="CAT foo",
+        HTTP_CAT_IDENTITY=identity,
+        HTTP_CAT_SERVICE_NAME="foo",
+    )
+
+    assert response.json() == {"detail": "Request not for this service."}
+
+
+def test_cat__authenticate_user__missing_service_name(client: Client, settings):
+    user = UserFactory.create()
+    identity = str(user.pk)
+    service_entity = ServiceEntityFactory.create()
+
+    settings.CAT_SETTINGS = {
+        "CAT_ROOT_KEY": "foo",
+        "SERVICE_TYPE": service_entity.type.name,
+        "SERVICE_NAME": service_entity.name,
+        "VERIFICATION_KEY_URL": reverse("cat_server:cat_verification_key"),
+    }
+
+    with use_test_client_in_service_setup(client):
+        get_verification_key()
+
+    url = reverse("example")
+    response = client.get(
+        url,
+        HTTP_AUTHORIZATION="CAT foo",
+        HTTP_CAT_IDENTITY=identity,
+    )
+
+    assert response.json() == {"detail": "Missing 'CAT-Service-Name' header."}
+
+
+def test_cat__authenticate_user__invalid_identity(client: Client, settings):
+    user = UserFactory.create()
+    identity = str(user.pk)
+    service_entity = ServiceEntityFactory.create()
+
+    settings.CAT_SETTINGS = {
+        "CAT_ROOT_KEY": "foo",
+        "SERVICE_TYPE": service_entity.type.name,
+        "SERVICE_NAME": service_entity.name,
+        "VERIFICATION_KEY_URL": reverse("cat_server:cat_verification_key"),
+        "IDENTITY_CONVERTER": int,
+    }
+
+    with use_test_client_in_service_setup(client):
+        get_verification_key()
+
+    url = reverse("example")
+    response = client.get(
+        url,
+        HTTP_AUTHORIZATION="CAT foo",
+        HTTP_CAT_IDENTITY=identity,
+        HTTP_CAT_SERVICE_NAME=service_entity.type.name,
+    )
+
+    assert response.json() == {"detail": f"Invalid identity value: '{identity}'. Could not convert to required type."}
+
+
+def test_cat__authenticate_user__missing_identity(client: Client, settings):
+    service_entity = ServiceEntityFactory.create()
+
+    settings.CAT_SETTINGS = {
+        "CAT_ROOT_KEY": "foo",
+        "SERVICE_TYPE": service_entity.type.name,
+        "SERVICE_NAME": service_entity.name,
+        "VERIFICATION_KEY_URL": reverse("cat_server:cat_verification_key"),
+        "IDENTITY_CONVERTER": int,
+    }
+
+    with use_test_client_in_service_setup(client):
+        get_verification_key()
+
+    url = reverse("example")
+    response = client.get(
+        url,
+        HTTP_AUTHORIZATION="CAT foo",
+    )
+
+    assert response.json() == {"detail": "Missing 'CAT-Identity' header."}
+
+
+def test_cat__authenticate_user__invalid_timestamp(client: Client, settings):
+    user = UserFactory.create()
+    identity = str(user.pk)
+    service_entity = ServiceEntityFactory.create()
+
+    settings.CAT_SETTINGS = {
+        "CAT_ROOT_KEY": "foo",
+        "SERVICE_TYPE": service_entity.type.name,
+        "SERVICE_NAME": service_entity.name,
+        "VERIFICATION_KEY_URL": reverse("cat_server:cat_verification_key"),
+    }
+
+    with use_test_client_in_service_setup(client):
+        get_verification_key()
+
+    url = reverse("example")
+    response = client.get(
+        url,
+        HTTP_AUTHORIZATION="CAT foo",
+        HTTP_CAT_IDENTITY=identity,
+        HTTP_CAT_SERVICE_NAME=service_entity.type.name,
+        HTTP_CAT_TIMESTAMP="foo",
+    )
+
+    assert response.json() == {"detail": "Invalid 'CAT-Timestamp' header. Must be in ISO 8601 format."}
+
+
+def test_cat__authenticate_user__invalid_valid_until(client: Client, settings):
+    user = UserFactory.create()
+    identity = str(user.pk)
+    service_entity = ServiceEntityFactory.create()
+
+    settings.CAT_SETTINGS = {
+        "CAT_ROOT_KEY": "foo",
+        "SERVICE_TYPE": service_entity.type.name,
+        "SERVICE_NAME": service_entity.name,
+        "VERIFICATION_KEY_URL": reverse("cat_server:cat_verification_key"),
+    }
+
+    with use_test_client_in_service_setup(client):
+        get_verification_key()
+
+    url = reverse("example")
+    response = client.get(
+        url,
+        HTTP_AUTHORIZATION="CAT foo",
+        HTTP_CAT_IDENTITY=identity,
+        HTTP_CAT_SERVICE_NAME=service_entity.type.name,
+        HTTP_CAT_VALID_UNTIL="foo",
+    )
+
+    assert response.json() == {"detail": "Invalid 'CAT-Valid-Until' header. Must be in ISO 8601 format."}
+
+
+def test_cat__authenticate_user__expired_valid_until(client: Client, settings):
+    user = UserFactory.create()
+    identity = str(user.pk)
+    service_entity = ServiceEntityFactory.create()
+
+    settings.CAT_SETTINGS = {
+        "CAT_ROOT_KEY": "foo",
+        "SERVICE_TYPE": service_entity.type.name,
+        "SERVICE_NAME": service_entity.name,
+        "VERIFICATION_KEY_URL": reverse("cat_server:cat_verification_key"),
+    }
+
+    with use_test_client_in_service_setup(client):
+        get_verification_key()
+
+    url = reverse("example")
+    response = client.get(
+        url,
+        HTTP_AUTHORIZATION="CAT foo",
+        HTTP_CAT_IDENTITY=identity,
+        HTTP_CAT_SERVICE_NAME=service_entity.type.name,
+        HTTP_CAT_VALID_UNTIL=datetime.datetime(2024, 1, 1).isoformat(),
+    )
+
+    assert response.json() == {"detail": "'CAT-Valid-Until' header indicates that the request is no longer valid."}
+
+
+def test_cat__authenticate_user__invalid_cat_header_chars(client: Client, settings):
+    user = UserFactory.create()
+    identity = str(user.pk)
+    service_entity = ServiceEntityFactory.create()
+
+    settings.CAT_SETTINGS = {
+        "CAT_ROOT_KEY": "foo",
+        "SERVICE_TYPE": service_entity.type.name,
+        "SERVICE_NAME": service_entity.name,
+        "VERIFICATION_KEY_URL": reverse("cat_server:cat_verification_key"),
+    }
+
+    with use_test_client_in_service_setup(client):
+        get_verification_key()
+
+    cat = create_cat_header(identity=identity, service_name=service_entity.type.name)
+
+    url = reverse("example")
+    response = client.get(
+        url,
+        HTTP_AUTHORIZATION=cat,
+        HTTP_CAT_IDENTITY=b"\xd3\x82\xe87<\xa4\x95\xd2\xe6Cu\xd3\xc8\xa0\xed\xfe",
+    )
+
+    assert response.json() == {"detail": "Invalid CAT header 'identity'. Should not contain non-ASCII characters."}
+
+
+def test_cat__authenticate_user__unrecognized_cat_header(client: Client, settings):
+    user = UserFactory.create()
+    identity = str(user.pk)
+    service_entity = ServiceEntityFactory.create()
+
+    settings.CAT_SETTINGS = {
+        "CAT_ROOT_KEY": "foo",
+        "SERVICE_TYPE": service_entity.type.name,
+        "SERVICE_NAME": service_entity.name,
+        "VERIFICATION_KEY_URL": reverse("cat_server:cat_verification_key"),
+    }
+
+    with use_test_client_in_service_setup(client):
+        get_verification_key()
+
+    cat = create_cat_header(identity=identity, service_name=service_entity.type.name)
+
+    url = reverse("example")
+    response = client.get(
+        url,
+        HTTP_AUTHORIZATION=cat,
+        HTTP_CAT_FOOD="foo",
+    )
+
+    assert response.json() == {"detail": "Unrecognized CAT header 'CAT-Food'."}
