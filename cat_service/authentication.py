@@ -125,9 +125,9 @@ class AuthInfo:
             raise ValueError(msg) from error
 
         if valid_until.tzinfo is None:
-            valid_until.replace(tzinfo=datetime.UTC)
+            valid_until.replace(tzinfo=datetime.timezone.utc)
 
-        if valid_until.astimezone(datetime.UTC) < datetime.datetime.now(tz=datetime.UTC):
+        if valid_until.astimezone(datetime.timezone.utc) < datetime.datetime.now(tz=datetime.timezone.utc):
             msg = __("'CAT-Valid-Until' header indicates that the request is no longer valid.")
             raise ValueError(msg)
 
