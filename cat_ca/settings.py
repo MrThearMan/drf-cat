@@ -2,10 +2,10 @@ from django.core.exceptions import ImproperlyConfigured
 from django.test.signals import setting_changed
 from settings_holder import SettingsHolder, reload_settings
 
-from cat_server.typing import NamedTuple
+from cat_ca.typing import NamedTuple
 
 __all__ = [
-    "cat_server_settings",
+    "cat_ca_settings",
 ]
 
 
@@ -27,16 +27,16 @@ IMPORT_STRINGS: set[bytes | str] = set()
 
 REMOVED_SETTINGS: set[str] = set()
 
-cat_server_settings = SettingsHolder(
+cat_ca_settings = SettingsHolder(
     setting_name=SETTING_NAME,
     defaults=DEFAULTS,
     import_strings=IMPORT_STRINGS,
     removed_settings=REMOVED_SETTINGS,
 )
 
-if cat_server_settings.CAT_ROOT_KEY == "":  # pragma: no cover
+if cat_ca_settings.CAT_ROOT_KEY == "":  # pragma: no cover
     msg = f"`{SETTING_NAME}['CAT_ROOT_KEY']` must be set."
     raise ImproperlyConfigured(msg)
 
-reload_my_settings = reload_settings(SETTING_NAME, cat_server_settings)
+reload_my_settings = reload_settings(SETTING_NAME, cat_ca_settings)
 setting_changed.connect(reload_my_settings)

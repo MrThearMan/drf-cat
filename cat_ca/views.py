@@ -6,10 +6,10 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from cat_server.cryptography import hmac
-from cat_server.exceptions import ServiceEntityNotFound, ServiceEntityTypeNotFound
-from cat_server.models import ServiceEntity, ServiceEntityType
-from cat_server.serializers import (
+from cat_ca.cryptography import hmac
+from cat_ca.exceptions import ServiceEntityNotFound, ServiceEntityTypeNotFound
+from cat_ca.models import ServiceEntity, ServiceEntityType
+from cat_ca.serializers import (
     CATCreationKeyInputSerializer,
     CATCreationKeyOutputSerializer,
     CATVerificationKeyInputSerializer,
@@ -19,7 +19,7 @@ from cat_server.serializers import (
 if TYPE_CHECKING:
     from rest_framework.request import Request
 
-    from cat_server.typing import Any
+    from cat_ca.typing import Any
 
 
 __all__ = [

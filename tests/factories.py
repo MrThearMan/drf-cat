@@ -4,7 +4,7 @@ import factory
 from factory import fuzzy
 from factory.django import DjangoModelFactory
 
-from cat_server.models import ServiceEntity, ServiceEntityType
+from cat_ca.models import ServiceEntity, ServiceEntityType
 from tests.example.models import User
 
 __all__ = [

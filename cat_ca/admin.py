@@ -1,6 +1,6 @@
 from django.contrib import admin
 
-from cat_server.models import ServiceEntity, ServiceEntityType
+from cat_ca.models import ServiceEntity, ServiceEntityType
 
 
 @admin.register(ServiceEntity)

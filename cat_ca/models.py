@@ -1,7 +1,7 @@
 from django.db import models
 from django.utils.translation import gettext_lazy as __
 
-from cat_server.managers import ServiceEntityManager, ServiceEntityTypeManager
+from cat_ca.managers import ServiceEntityManager, ServiceEntityTypeManager
 
 __all__ = [
     "ServiceEntityType",

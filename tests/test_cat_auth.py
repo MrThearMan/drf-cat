@@ -6,7 +6,7 @@ from django.core.exceptions import ImproperlyConfigured
 from django.test.client import Client
 from rest_framework.reverse import reverse
 
-from cat_server.cryptography import hmac
+from cat_ca.cryptography import hmac
 from cat_service.cryptography import create_cat_header
 from cat_service.setup import get_verification_key
 from tests.factories import ServiceEntityFactory, UserFactory
@@ -22,7 +22,7 @@ def test_cat__get_service_verification_key(client: Client):
     verification_key = hmac(msg=service_entity.type.name)
 
     data = {"type": service_entity.type.name, "name": service_entity.name}
-    url = reverse("cat_server:cat_verification_key")
+    url = reverse("cat_ca:cat_verification_key")
     response = client.post(url, data=data)
 
     assert response.json() == {"verification_key": verification_key}
@@ -30,7 +30,7 @@ def test_cat__get_service_verification_key(client: Client):
 
 def test_cat__get_service_verification_key__service_entity_missing(client: Client):
     data = {"type": "foo", "name": "bar"}
-    url = reverse("cat_server:cat_verification_key")
+    url = reverse("cat_ca:cat_verification_key")
     response = client.post(url, data=data)
 
     assert response.json() == {"detail": "Service entity of type 'foo' with name 'bar' not found."}
@@ -45,7 +45,7 @@ def test_cat__get_creation_key(client: Client):
     creation_key = hmac(msg=str(user.pk), key=verification_key)
 
     data = {"service": service_entity.type.name}
-    url = reverse("cat_server:cat_creation_key")
+    url = reverse("cat_ca:cat_creation_key")
     response = client.post(url, data=data)
 
     assert response.json() == {"creation_key": creation_key}
@@ -56,7 +56,7 @@ def test_cat__get_creation_key__service_entity_type_missing(client: Client):
     client.force_login(user=user)
 
     data = {"service": "foo"}
-    url = reverse("cat_server:cat_creation_key")
+    url = reverse("cat_ca:cat_creation_key")
     response = client.post(url, data=data)
 
     assert response.json() == {"detail": "Service entity type 'foo' not found."}
@@ -71,7 +71,7 @@ def test_cat__authenticate_user(client: Client, settings):
         "CAT_ROOT_KEY": "foo",
         "SERVICE_TYPE": service_entity.type.name,
         "SERVICE_NAME": service_entity.name,
-        "VERIFICATION_KEY_URL": reverse("cat_server:cat_verification_key"),
+        "VERIFICATION_KEY_URL": reverse("cat_ca:cat_verification_key"),
     }
 
     with use_test_client_in_service_setup(client):
@@ -99,7 +99,7 @@ def test_cat__authenticate_user__cat_headers_in_bytes(client: Client, settings):
         "CAT_ROOT_KEY": "foo",
         "SERVICE_TYPE": service_entity.type.name,
         "SERVICE_NAME": service_entity.name,
-        "VERIFICATION_KEY_URL": reverse("cat_server:cat_verification_key"),
+        "VERIFICATION_KEY_URL": reverse("cat_ca:cat_verification_key"),
     }
 
     with use_test_client_in_service_setup(client):
@@ -127,7 +127,7 @@ def test_cat__authenticate_user__extra_info(client: Client, settings):
         "CAT_ROOT_KEY": "foo",
         "SERVICE_TYPE": service_entity.type.name,
         "SERVICE_NAME": service_entity.name,
-        "VERIFICATION_KEY_URL": reverse("cat_server:cat_verification_key"),
+        "VERIFICATION_KEY_URL": reverse("cat_ca:cat_verification_key"),
     }
 
     with use_test_client_in_service_setup(client):
@@ -162,7 +162,7 @@ def test_cat__authenticate_user__missing_service_type_setting(settings):
     settings.CAT_SETTINGS = {
         "CAT_ROOT_KEY": "foo",
         "SERVICE_NAME": service_entity.name,
-        "VERIFICATION_KEY_URL": reverse("cat_server:cat_verification_key"),
+        "VERIFICATION_KEY_URL": reverse("cat_ca:cat_verification_key"),
     }
 
     msg = "`CAT_SETTINGS['SERVICE_TYPE']` must be set."
@@ -176,7 +176,7 @@ def test_cat__authenticate_user__missing_service_name_setting(settings):
     settings.CAT_SETTINGS = {
         "CAT_ROOT_KEY": "foo",
         "SERVICE_TYPE": service_entity.type.name,
-        "VERIFICATION_KEY_URL": reverse("cat_server:cat_verification_key"),
+        "VERIFICATION_KEY_URL": reverse("cat_ca:cat_verification_key"),
     }
 
     msg = "`CAT_SETTINGS['SERVICE_NAME']` must be set."
@@ -205,7 +205,7 @@ def test_cat__authenticate_user__dont_request_new_if_set(client: Client, setting
         "CAT_ROOT_KEY": "foo",
         "SERVICE_TYPE": service_entity.type.name,
         "SERVICE_NAME": service_entity.name,
-        "VERIFICATION_KEY_URL": reverse("cat_server:cat_verification_key"),
+        "VERIFICATION_KEY_URL": reverse("cat_ca:cat_verification_key"),
     }
 
     with use_test_client_in_service_setup(client) as client:
@@ -226,7 +226,7 @@ def test_cat__authenticate_user__do_request_new_if_forced(client: Client, settin
         "CAT_ROOT_KEY": "foo",
         "SERVICE_TYPE": service_entity.type.name,
         "SERVICE_NAME": service_entity.name,
-        "VERIFICATION_KEY_URL": reverse("cat_server:cat_verification_key"),
+        "VERIFICATION_KEY_URL": reverse("cat_ca:cat_verification_key"),
     }
 
     with use_test_client_in_service_setup(client) as client:
@@ -272,7 +272,7 @@ def test_cat__authenticate_user__invalid_header(client: Client, settings, header
         "CAT_ROOT_KEY": "foo",
         "SERVICE_TYPE": service_entity.type.name,
         "SERVICE_NAME": service_entity.name,
-        "VERIFICATION_KEY_URL": reverse("cat_server:cat_verification_key"),
+        "VERIFICATION_KEY_URL": reverse("cat_ca:cat_verification_key"),
     }
 
     with use_test_client_in_service_setup(client):
@@ -293,7 +293,7 @@ def test_cat__authenticate_user__invalid_header__no_verification_key(client: Cli
         "CAT_ROOT_KEY": "foo",
         "SERVICE_TYPE": service_entity.type.name,
         "SERVICE_NAME": service_entity.name,
-        "VERIFICATION_KEY_URL": reverse("cat_server:cat_verification_key"),
+        "VERIFICATION_KEY_URL": reverse("cat_ca:cat_verification_key"),
     }
 
     url = reverse("example")
@@ -316,7 +316,7 @@ def test_cat__authenticate_user__invalid_cat(client: Client, settings):
         "CAT_ROOT_KEY": "foo",
         "SERVICE_TYPE": service_entity.type.name,
         "SERVICE_NAME": service_entity.name,
-        "VERIFICATION_KEY_URL": reverse("cat_server:cat_verification_key"),
+        "VERIFICATION_KEY_URL": reverse("cat_ca:cat_verification_key"),
     }
 
     with use_test_client_in_service_setup(client):
@@ -342,7 +342,7 @@ def test_cat__authenticate_user__invalid_service_name(client: Client, settings):
         "CAT_ROOT_KEY": "foo",
         "SERVICE_TYPE": service_entity.type.name,
         "SERVICE_NAME": service_entity.name,
-        "VERIFICATION_KEY_URL": reverse("cat_server:cat_verification_key"),
+        "VERIFICATION_KEY_URL": reverse("cat_ca:cat_verification_key"),
     }
 
     with use_test_client_in_service_setup(client):
@@ -368,7 +368,7 @@ def test_cat__authenticate_user__missing_service_name(client: Client, settings):
         "CAT_ROOT_KEY": "foo",
         "SERVICE_TYPE": service_entity.type.name,
         "SERVICE_NAME": service_entity.name,
-        "VERIFICATION_KEY_URL": reverse("cat_server:cat_verification_key"),
+        "VERIFICATION_KEY_URL": reverse("cat_ca:cat_verification_key"),
     }
 
     with use_test_client_in_service_setup(client):
@@ -393,7 +393,7 @@ def test_cat__authenticate_user__invalid_identity(client: Client, settings):
         "CAT_ROOT_KEY": "foo",
         "SERVICE_TYPE": service_entity.type.name,
         "SERVICE_NAME": service_entity.name,
-        "VERIFICATION_KEY_URL": reverse("cat_server:cat_verification_key"),
+        "VERIFICATION_KEY_URL": reverse("cat_ca:cat_verification_key"),
         "IDENTITY_CONVERTER": int,
     }
 
@@ -418,7 +418,7 @@ def test_cat__authenticate_user__missing_identity(client: Client, settings):
         "CAT_ROOT_KEY": "foo",
         "SERVICE_TYPE": service_entity.type.name,
         "SERVICE_NAME": service_entity.name,
-        "VERIFICATION_KEY_URL": reverse("cat_server:cat_verification_key"),
+        "VERIFICATION_KEY_URL": reverse("cat_ca:cat_verification_key"),
         "IDENTITY_CONVERTER": int,
     }
 
@@ -443,7 +443,7 @@ def test_cat__authenticate_user__invalid_timestamp(client: Client, settings):
         "CAT_ROOT_KEY": "foo",
         "SERVICE_TYPE": service_entity.type.name,
         "SERVICE_NAME": service_entity.name,
-        "VERIFICATION_KEY_URL": reverse("cat_server:cat_verification_key"),
+        "VERIFICATION_KEY_URL": reverse("cat_ca:cat_verification_key"),
     }
 
     with use_test_client_in_service_setup(client):
@@ -470,7 +470,7 @@ def test_cat__authenticate_user__invalid_valid_until(client: Client, settings):
         "CAT_ROOT_KEY": "foo",
         "SERVICE_TYPE": service_entity.type.name,
         "SERVICE_NAME": service_entity.name,
-        "VERIFICATION_KEY_URL": reverse("cat_server:cat_verification_key"),
+        "VERIFICATION_KEY_URL": reverse("cat_ca:cat_verification_key"),
     }
 
     with use_test_client_in_service_setup(client):
@@ -497,7 +497,7 @@ def test_cat__authenticate_user__expired_valid_until(client: Client, settings):
         "CAT_ROOT_KEY": "foo",
         "SERVICE_TYPE": service_entity.type.name,
         "SERVICE_NAME": service_entity.name,
-        "VERIFICATION_KEY_URL": reverse("cat_server:cat_verification_key"),
+        "VERIFICATION_KEY_URL": reverse("cat_ca:cat_verification_key"),
     }
 
     with use_test_client_in_service_setup(client):
@@ -524,7 +524,7 @@ def test_cat__authenticate_user__invalid_cat_header_chars(client: Client, settin
         "CAT_ROOT_KEY": "foo",
         "SERVICE_TYPE": service_entity.type.name,
         "SERVICE_NAME": service_entity.name,
-        "VERIFICATION_KEY_URL": reverse("cat_server:cat_verification_key"),
+        "VERIFICATION_KEY_URL": reverse("cat_ca:cat_verification_key"),
     }
 
     with use_test_client_in_service_setup(client):
@@ -551,7 +551,7 @@ def test_cat__authenticate_user__unrecognized_cat_header(client: Client, setting
         "CAT_ROOT_KEY": "foo",
         "SERVICE_TYPE": service_entity.type.name,
         "SERVICE_NAME": service_entity.name,
-        "VERIFICATION_KEY_URL": reverse("cat_server:cat_verification_key"),
+        "VERIFICATION_KEY_URL": reverse("cat_ca:cat_verification_key"),
     }
 
     with use_test_client_in_service_setup(client):

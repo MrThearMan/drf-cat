@@ -1,8 +1,8 @@
 from django.urls import path
 
-from cat_server.views import CATCreationKeyView, CATVerificationKeyView
+from cat_ca.views import CATCreationKeyView, CATVerificationKeyView
 
-app_name = "cat_server"
+app_name = "cat_ca"
 
 urlpatterns = [
     path("verification_key/", CATVerificationKeyView.as_view(), name="cat_verification_key"),

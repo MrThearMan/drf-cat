@@ -52,7 +52,10 @@ class Migration(migrations.Migration):
                 ),
                 (
                     "name",
-                    models.CharField(help_text="What is the name of this entity?", max_length=255),
+                    models.CharField(
+                        help_text="What is the name of this entity?",
+                        max_length=255,
+                    ),
                 ),
                 (
                     "type",
@@ -60,7 +63,7 @@ class Migration(migrations.Migration):
                         help_text="What kind of entity is this?",
                         on_delete=django.db.models.deletion.PROTECT,
                         related_name="service_entities",
-                        to="cat_server.serviceentitytype",
+                        to="cat_ca.serviceentitytype",
                     ),
                 ),
             ],
@@ -69,7 +72,12 @@ class Migration(migrations.Migration):
                 "verbose_name_plural": "Service entities",
                 "ordering": ["type", "name"],
                 "base_manager_name": "objects",
-                "indexes": [models.Index(fields=["type", "name"], name="service_entity_index")],
+                "indexes": [
+                    models.Index(
+                        fields=["type", "name"],
+                        name="service_entity_index",
+                    ),
+                ],
             },
         ),
         migrations.AddConstraint(
