@@ -219,7 +219,7 @@ def get_cat_headers(request: Request) -> dict[str, str]:
             try:
                 value = value.decode()  # noqa: PLW2901
             except UnicodeError as error:
-                msg = __("Invalid CAT header '%(header)s'. Should not contain non-ASCII characters.")
+                msg = __("Invalid CAT header 'CAT-%(header)s'. Should not contain non-ASCII characters.")
                 msg %= {"header": header_key_formatted}
                 raise ValueError(msg) from error
 

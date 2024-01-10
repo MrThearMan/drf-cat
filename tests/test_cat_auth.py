@@ -539,7 +539,7 @@ def test_cat__authenticate_user__invalid_cat_header_chars(client: Client, settin
         HTTP_CAT_IDENTITY=b"\xd3\x82\xe87<\xa4\x95\xd2\xe6Cu\xd3\xc8\xa0\xed\xfe",
     )
 
-    assert response.json() == {"detail": "Invalid CAT header 'identity'. Should not contain non-ASCII characters."}
+    assert response.json() == {"detail": "Invalid CAT header 'CAT-Identity'. Should not contain non-ASCII characters."}
 
 
 def test_cat__authenticate_user__unrecognized_cat_header(client: Client, settings):
