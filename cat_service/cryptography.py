@@ -3,15 +3,13 @@ from __future__ import annotations
 import json
 from hmac import digest
 
-from django.utils.translation import gettext_lazy as __
-
 from cat_service.settings import cat_service_settings
+from cat_service.utils import get_cat_verification_key
 
 __all__ = [
     "create_cat",
     "create_cat_creation_key",
     "create_cat_header",
-    "get_cat_verification_key",
     "hmac",
 ]
 
@@ -22,14 +20,6 @@ def hmac(*, msg: str, key: str) -> str:
         msg=msg.encode(),
         digest=cat_service_settings.PSEUDO_RANDOM_FUNCTION,
     ).hex()
-
-
-def get_cat_verification_key() -> str:
-    if cat_service_settings.VERIFICATION_KEY == "":
-        msg = __("Service not set up correctly.")
-        raise ValueError(msg) from None
-
-    return cat_service_settings.VERIFICATION_KEY
 
 
 def create_cat_creation_key(*, identity: str) -> str:

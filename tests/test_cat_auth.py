@@ -1,5 +1,6 @@
 import datetime
 import re
+import secrets
 
 import pytest
 from django.core.exceptions import ImproperlyConfigured
@@ -135,12 +136,14 @@ def test_cat__authenticate_user__extra_info(client: Client, settings):
 
     timestamp = datetime.datetime(2024, 1, 1).isoformat()
     valid_until = (datetime.datetime.now() + datetime.timedelta(minutes=5)).isoformat()
+    nonce = secrets.token_urlsafe()
 
     cat = create_cat_header(
         identity=identity,
         service_name=service_entity.type.name,
         timestamp=timestamp,
         valid_until=valid_until,
+        nonce=nonce,
     )
 
     url = reverse("example")
@@ -151,6 +154,7 @@ def test_cat__authenticate_user__extra_info(client: Client, settings):
         HTTP_CAT_SERVICE_NAME=service_entity.type.name,
         HTTP_CAT_TIMESTAMP=timestamp,
         HTTP_CAT_VALID_UNTIL=valid_until,
+        HTTP_CAT_NONCE=nonce,
     )
 
     assert response.json() == {"foo": "bar"}
@@ -261,11 +265,11 @@ def test_cat__authenticate_user__do_request_new_if_forced(client: Client, settin
         ),
         (
             "Token foo",
-            "Invalid auth scheme: 'TOKEN'. Accepted: 'CAT'.",
+            "Invalid auth scheme: 'Token'. Accepted: 'CAT'.",
         ),
     ),
 )
-def test_cat__authenticate_user__invalid_header(client: Client, settings, header, error):
+def test_cat__authenticate_user__invalid_auth_header(client: Client, settings, header, error):
     service_entity = ServiceEntityFactory.create()
 
     settings.CAT_SETTINGS = {
@@ -284,7 +288,7 @@ def test_cat__authenticate_user__invalid_header(client: Client, settings, header
     assert response.json() == {"detail": error}
 
 
-def test_cat__authenticate_user__invalid_header__no_verification_key(client: Client, settings):
+def test_cat__authenticate_user__server_has_no_verification_key(client: Client, settings):
     user = UserFactory.create()
     identity = str(user.pk)
     service_entity = ServiceEntityFactory.create()
@@ -381,7 +385,7 @@ def test_cat__authenticate_user__missing_service_name(client: Client, settings):
         HTTP_CAT_IDENTITY=identity,
     )
 
-    assert response.json() == {"detail": "Missing 'CAT-Service-Name' header."}
+    assert response.json() == {"detail": "Missing required headers: 'CAT-Service-Name'."}
 
 
 def test_cat__authenticate_user__invalid_identity(client: Client, settings):
@@ -429,9 +433,10 @@ def test_cat__authenticate_user__missing_identity(client: Client, settings):
     response = client.get(
         url,
         HTTP_AUTHORIZATION="CAT foo",
+        HTTP_CAT_SERVICE_NAME=service_entity.type.name,
     )
 
-    assert response.json() == {"detail": "Missing 'CAT-Identity' header."}
+    assert response.json() == {"detail": "Missing required headers: 'CAT-Identity'."}
 
 
 def test_cat__authenticate_user__invalid_timestamp(client: Client, settings):
@@ -566,4 +571,32 @@ def test_cat__authenticate_user__unrecognized_cat_header(client: Client, setting
         HTTP_CAT_FOOD="foo",
     )
 
-    assert response.json() == {"detail": "Unrecognized CAT header 'CAT-Food'."}
+    assert response.json() == {"detail": "Unrecognized CAT header: 'CAT-Food'."}
+
+
+def test_cat__authenticate_user__validator_not_found(client: Client, settings):
+    user = UserFactory.create()
+    identity = str(user.pk)
+    service_entity = ServiceEntityFactory.create()
+
+    settings.CAT_SETTINGS = {
+        "CAT_ROOT_KEY": "foo",
+        "SERVICE_TYPE": service_entity.type.name,
+        "SERVICE_NAME": service_entity.name,
+        "VERIFICATION_KEY_URL": reverse("cat_ca:cat_verification_key"),
+        "ADDITIONAL_VALID_CAT_HEADERS": ["food"],
+    }
+
+    with use_test_client_in_service_setup(client):
+        get_verification_key()
+
+    cat = create_cat_header(identity=identity, service_name=service_entity.type.name)
+
+    url = reverse("example")
+    response = client.get(
+        url,
+        HTTP_AUTHORIZATION=cat,
+        HTTP_CAT_FOOD="foo",
+    )
+
+    assert response.json() == {"detail": "Missing validation function for header: 'CAT-Food'."}

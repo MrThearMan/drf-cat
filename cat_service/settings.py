@@ -28,8 +28,10 @@ class DefaultSettings(NamedTuple):
     """Pseudo random function to use for generating keys."""
     AUTH_SCHEME: str = "CAT"
     """Auth scheme to use in Authorization header."""
-    VALID_CAT_HEADERS: list[str] = ["identity", "service_name", "timestamp", "valid_until"]
-    """Valid CAT headers."""
+    ADDITIONAL_VALID_CAT_HEADERS: list[str] = []
+    """Additional valid CAT headers. See `cat_service.utils.get_valid_cat_headers` for more info."""
+    ADDITIONAL_REQUIRED_CAT_HEADERS: list[str] = []
+    """Additional required CAT headers. See `cat_service.utils.get_required_cat_headers` for more info."""
     IDENTITY_CONVERTER: Callable[[str], Any] = str
     """Function to convert identity value to the required type."""
 
