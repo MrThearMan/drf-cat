@@ -6,6 +6,9 @@ from cat_service.settings import cat_service_settings
 
 def get_verification_key(*, force_refresh: bool = False) -> None:
     """Get the verification key for a given service entity."""
+    if not force_refresh and cat_service_settings.VERIFICATION_KEY != "":
+        return
+
     if cat_service_settings.SERVICE_TYPE == "":
         msg = f"`{cat_service_settings.setting_name}['SERVICE_TYPE']` must be set."
         raise ImproperlyConfigured(msg)
@@ -17,9 +20,6 @@ def get_verification_key(*, force_refresh: bool = False) -> None:
     if cat_service_settings.VERIFICATION_KEY_URL == "":
         msg = f"`{cat_service_settings.setting_name}['VERIFICATION_KEY_URL']` must be set."
         raise ImproperlyConfigured(msg)
-
-    if not force_refresh and cat_service_settings.VERIFICATION_KEY != "":
-        return
 
     url = cat_service_settings.VERIFICATION_KEY_URL
     data = {

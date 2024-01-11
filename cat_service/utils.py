@@ -4,6 +4,7 @@ from typing import TYPE_CHECKING
 
 from django.utils.translation import gettext_lazy as __
 
+from . import known_headers
 from .settings import cat_service_settings
 
 if TYPE_CHECKING:
@@ -96,22 +97,19 @@ def get_cat_verification_key() -> str:
 
 
 def get_required_cat_headers() -> set[str]:
-    """Required CAT headers. Headers will be in Header-Case with 'CAT' prefixed (e.g., CAT-Service-Name)."""
-    return {to_cat_header_name(header) for header in cat_service_settings.ADDITIONAL_REQUIRED_CAT_HEADERS} | {
-        "CAT-Identity",
-        "CAT-Service-Name",
+    """Required CAT headers in Header-Case with 'CAT' prefixed (e.g., CAT-Service-Name)."""
+    return set(cat_service_settings.ADDITIONAL_REQUIRED_CAT_HEADERS) | {
+        known_headers.IDENTITY,
+        known_headers.SERVICE_NAME,
     }
 
 
 def get_valid_cat_headers() -> set[str]:
-    """
-    Valid CAT headers. These name will be in snake_case, but the actual headers should be in
-    Header-Case with 'CAT' prefixed (e.g., CAT-Service-Name).
-    """
-    return {to_cat_header_name(header) for header in cat_service_settings.ADDITIONAL_VALID_CAT_HEADERS} | {
-        "CAT-Identity",
-        "CAT-Service-Name",
-        "CAT-Timestamp",
-        "CAT-Valid-Until",
-        "CAT-Nonce",
+    """Valid CAT headers in Header-Case with 'CAT' prefixed (e.g., CAT-Service-Name)."""
+    return set(cat_service_settings.ADDITIONAL_VALID_CAT_HEADERS) | {
+        known_headers.IDENTITY,
+        known_headers.SERVICE_NAME,
+        known_headers.TIMESTAMP,
+        known_headers.VALID_UNTIL,
+        known_headers.NONCE,
     }

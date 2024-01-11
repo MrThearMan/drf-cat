@@ -584,7 +584,7 @@ def test_cat__authenticate_user__validator_not_found(client: Client, settings):
         "SERVICE_TYPE": service_entity.type.name,
         "SERVICE_NAME": service_entity.name,
         "VERIFICATION_KEY_URL": reverse("cat_ca:cat_verification_key"),
-        "ADDITIONAL_VALID_CAT_HEADERS": ["food"],
+        "ADDITIONAL_VALID_CAT_HEADERS": ["CAT-Food"],
     }
 
     with use_test_client_in_service_setup(client):

@@ -4,7 +4,6 @@ import datetime
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
-from django.contrib.auth import get_user_model
 from django.utils.translation import gettext_lazy as __
 from rest_framework.authentication import BaseAuthentication
 from rest_framework.exceptions import AuthenticationFailed
@@ -12,6 +11,7 @@ from rest_framework.exceptions import AuthenticationFailed
 from cat_service.cryptography import create_cat
 from cat_service.settings import cat_service_settings
 
+from . import error_codes, known_headers
 from .utils import (
     as_human_readable_list,
     from_cat_header_name,
@@ -21,11 +21,12 @@ from .utils import (
 )
 
 if TYPE_CHECKING:
+    from django.contrib.auth import get_user_model
     from rest_framework.request import Request
 
     from .typing import Any, HeaderKey, HeaderValue, Self, Validator
 
-User = get_user_model()
+    User = get_user_model()
 
 
 __all__ = [
@@ -38,6 +39,8 @@ __all__ = [
 
 @dataclass(frozen=True, slots=True)
 class AuthInfo:
+    """Class for holding authentication information."""
+
     scheme: str
     creation_key: str
     identity: Any
@@ -45,26 +48,27 @@ class AuthInfo:
 
     @classmethod
     def from_headers(cls, authorization_header: str, cat_headers: dict[HeaderKey, HeaderValue]) -> Self:
+        """Validate authentication header with CAT headers and create an AuthInfo instance."""
         try:
             scheme, token = authorization_header.strip().split()
         except ValueError as error:
             msg = __("Invalid Authorization header. Must be of form: '%(scheme)s <token>'.")
             msg %= {"scheme": cat_service_settings.AUTH_SCHEME}
-            raise ValueError(msg) from error
+            raise AuthenticationFailed(msg, code=error_codes.INVALID_AUTH_HEADER) from error
 
         if scheme.casefold() != cat_service_settings.AUTH_SCHEME.casefold():
             msg = __("Invalid auth scheme: '%(scheme)s'. Accepted: '%(accepted_scheme)s'.")
             msg %= {"scheme": scheme, "accepted_scheme": cat_service_settings.AUTH_SCHEME}
-            raise ValueError(msg) from None
+            raise AuthenticationFailed(msg, code=error_codes.INVALID_AUTH_SCHEME) from None
 
         info = cls.validate(cat_headers)
         cat = create_cat(**{from_cat_header_name(key): value for key, value in cat_headers.items()})
 
         if token != cat:
             msg = __("Invalid CAT.")
-            raise ValueError(msg) from None
+            raise AuthenticationFailed(msg, code=error_codes.INVALID_CAT) from None
 
-        identity = info.pop("CAT-Identity")
+        identity = info.pop(known_headers.IDENTITY)
         return cls(scheme=scheme.upper(), creation_key=token, identity=identity, info=info)
 
     @classmethod
@@ -77,12 +81,12 @@ class AuthInfo:
             if header_key not in valid_headers:
                 msg = __("Unrecognized CAT header: '%(header)s'.")
                 msg %= {"header": header_key}
-                raise ValueError(msg) from None
+                raise AuthenticationFailed(msg, code=error_codes.UNRECOGNIZED_CAT_HEADER) from None
 
             validator: Validator | None = getattr(cls, f"validate_{from_cat_header_name(header_key)}", None)
             if validator is None:
                 msg = __("Missing validation function for header: '%(header)s'.") % {"header": header_key}
-                raise ValueError(msg) from None
+                raise AuthenticationFailed(msg, code=error_codes.MISSING_VALIDATION_FUNCTION) from None
 
             data[header_key] = validator(header_value)
             required_headers.discard(header_key)
@@ -91,7 +95,7 @@ class AuthInfo:
             msg = __("Missing required headers: %(required_headers)s.") % {
                 "required_headers": as_human_readable_list(required_headers),
             }
-            raise ValueError(msg) from None
+            raise AuthenticationFailed(msg, code=error_codes.MISSING_REQUIRED_HEADERS) from None
 
         return data
 
@@ -102,13 +106,13 @@ class AuthInfo:
         except Exception as error:  # noqa: BLE001
             msg = __("Invalid identity value: '%(identity)s'. Could not convert to required type.")
             msg %= {"identity": identity}
-            raise ValueError(msg) from error
+            raise AuthenticationFailed(msg, code=error_codes.INVALID_IDENTITY) from error
 
     @classmethod
     def validate_service_name(cls, service_name: str) -> str:
         if service_name.casefold() != cat_service_settings.SERVICE_TYPE.casefold():
             msg = __("Request not for this service.")
-            raise ValueError(msg) from None
+            raise AuthenticationFailed(msg, code=error_codes.WRONG_SERVICE) from None
         return service_name
 
     @classmethod
@@ -117,7 +121,7 @@ class AuthInfo:
             return datetime.datetime.fromisoformat(timestamp)
         except (TypeError, ValueError) as error:
             msg = __("Invalid 'CAT-Timestamp' header. Must be in ISO 8601 format.")
-            raise ValueError(msg) from error
+            raise AuthenticationFailed(msg, code=error_codes.INVALID_TIMESTAMP) from error
 
     @classmethod
     def validate_valid_until(cls, timestamp: str) -> datetime.datetime:
@@ -125,14 +129,14 @@ class AuthInfo:
             valid_until = datetime.datetime.fromisoformat(timestamp)
         except (TypeError, ValueError) as error:
             msg = __("Invalid 'CAT-Valid-Until' header. Must be in ISO 8601 format.")
-            raise ValueError(msg) from error
+            raise AuthenticationFailed(msg, code=error_codes.INVALID_VALID_UNTIL) from error
 
         if valid_until.tzinfo is None:
             valid_until.replace(tzinfo=datetime.timezone.utc)
 
         if valid_until.astimezone(datetime.timezone.utc) < datetime.datetime.now(tz=datetime.timezone.utc):
             msg = __("'CAT-Valid-Until' header indicates that the request is no longer valid.")
-            raise ValueError(msg)
+            raise AuthenticationFailed(msg, code=error_codes.CAT_EXPIRED) from None
 
         return valid_until
 
@@ -165,26 +169,15 @@ class CATAuthentication(BaseAuthentication):
     auth_info_class: type[AuthInfo] = AuthInfo
 
     def authenticate(self, request: Request) -> tuple[User, None] | None:
-        try:
-            authorization_header = get_authorization_header(request)
-        except ValueError as error:
-            raise AuthenticationFailed(error.args[0]) from error
-
-        try:
-            cat_headers = get_cat_headers(request)
-        except ValueError as error:
-            raise AuthenticationFailed(error.args[0]) from error
-
-        try:
-            auth_info = self.auth_info_class.from_headers(authorization_header, cat_headers)
-        except ValueError as error:
-            raise AuthenticationFailed(error.args[0]) from error
+        authorization_header = get_authorization_header(request)
+        cat_headers = get_cat_headers(request)
+        auth_info = self.auth_info_class.from_headers(authorization_header, cat_headers)
 
         try:
             user = self.get_user(auth_info)
         except Exception as error:  # noqa: BLE001 pragma: no cover
             msg = __("User does not exist.")
-            raise AuthenticationFailed(msg) from error
+            raise AuthenticationFailed(msg, code=error_codes.USER_DOES_NOT_EXIST) from error
 
         return user, None
 
@@ -199,7 +192,7 @@ def get_authorization_header(request: Request) -> str:
     """
     Return request's 'Authorization' header as a string.
 
-    :raises ValueError: The header is not valid ASCII.
+    :raises AuthenticationFailed: The header is not valid ASCII.
     """
     authorization: str | bytes = request.META.get("HTTP_AUTHORIZATION", "")
     if isinstance(authorization, bytes):
@@ -207,7 +200,7 @@ def get_authorization_header(request: Request) -> str:
             return authorization.decode()
         except UnicodeError as error:
             msg = __("Invalid Authorization header. Should not contain non-ASCII characters.")
-            raise ValueError(msg) from error
+            raise AuthenticationFailed(msg, code=error_codes.INVALID_AUTH_HEADER) from error
     return authorization
 
 
@@ -215,7 +208,7 @@ def get_cat_headers(request: Request) -> dict[HeaderKey, HeaderValue]:
     """
     Return additional headers sent for CAT authentication.
 
-    :raises ValueError: Invalid header found.
+    :raises AuthenticationFailed: Invalid header found.
     """
     headers: dict[HeaderKey, HeaderValue] = {}
     for header, value in request.META.items():
@@ -230,7 +223,7 @@ def get_cat_headers(request: Request) -> dict[HeaderKey, HeaderValue]:
             except UnicodeError as error:
                 msg = __("Invalid CAT header '%(header)s'. Should not contain non-ASCII characters.")
                 msg %= {"header": header_key}
-                raise ValueError(msg) from error
+                raise AuthenticationFailed(msg, code=error_codes.INVALID_CAT_HEADER) from error
 
         headers[header_key] = value
     return headers

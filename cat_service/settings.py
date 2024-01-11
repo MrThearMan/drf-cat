@@ -29,9 +29,9 @@ class DefaultSettings(NamedTuple):
     AUTH_SCHEME: str = "CAT"
     """Auth scheme to use in Authorization header."""
     ADDITIONAL_VALID_CAT_HEADERS: list[str] = []
-    """Additional valid CAT headers. See `cat_service.utils.get_valid_cat_headers` for more info."""
+    """Additional valid CAT headers in form: `CAT-{Name-In-Header-Case}`."""
     ADDITIONAL_REQUIRED_CAT_HEADERS: list[str] = []
-    """Additional required CAT headers. See `cat_service.utils.get_required_cat_headers` for more info."""
+    """Additional required CAT headers: in form `CAT-{Name-In-Header-Case}`"""
     IDENTITY_CONVERTER: Callable[[str], Any] = str
     """Function to convert identity value to the required type."""
 

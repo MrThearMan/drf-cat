@@ -1,0 +1,5 @@
+IDENTITY = "CAT-Identity"
+SERVICE_NAME = "CAT-Service-Name"
+TIMESTAMP = "CAT-Timestamp"
+VALID_UNTIL = "CAT-Valid-Until"
+NONCE = "CAT-Nonce"
