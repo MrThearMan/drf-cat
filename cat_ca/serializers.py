@@ -9,7 +9,7 @@ __all__ = [
 
 
 class CATVerificationKeyInputSerializer(serializers.Serializer):
-    type = serializers.CharField(max_length=255)  # noqa: A003
+    type = serializers.CharField(max_length=255)
     name = serializers.CharField(max_length=255)
 
 

@@ -29,7 +29,7 @@ class ServiceEntityType(models.Model):
 
 
 class ServiceEntity(models.Model):
-    type: ServiceEntityType = models.ForeignKey(  # noqa: A003
+    type: ServiceEntityType = models.ForeignKey(
         ServiceEntityType,
         on_delete=models.PROTECT,
         related_name="service_entities",
