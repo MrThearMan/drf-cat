@@ -4,6 +4,7 @@ import datetime
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
+from django.contrib.auth import get_user_model
 from django.utils.translation import gettext_lazy as __
 from rest_framework.authentication import BaseAuthentication
 from rest_framework.exceptions import AuthenticationFailed
@@ -21,12 +22,12 @@ from .utils import (
 )
 
 if TYPE_CHECKING:
-    from django.contrib.auth import get_user_model
     from rest_framework.request import Request
 
     from .typing import Any, HeaderKey, HeaderValue, Self, Validator
 
-    User = get_user_model()
+
+User = get_user_model()
 
 
 __all__ = [
@@ -62,7 +63,10 @@ class AuthInfo:
             raise AuthenticationFailed(msg, code=error_codes.INVALID_AUTH_SCHEME) from None
 
         info = cls.validate(cat_headers)
-        cat = create_cat(**{from_cat_header_name(key): value for key, value in cat_headers.items()})
+        try:
+            cat = create_cat(**{from_cat_header_name(key): value for key, value in cat_headers.items()})
+        except ValueError as error:
+            raise AuthenticationFailed(error.args[0], code=error_codes.SERVICE_SETUP_ERROR) from error
 
         if token != cat:
             msg = __("Invalid CAT.")
