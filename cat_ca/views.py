@@ -28,6 +28,10 @@ __all__ = [
 ]
 
 
+class PublicCertificateView(APIView):
+    pass  # TODO: implement
+
+
 class CATVerificationKeyView(APIView):
     # TODO: authentication check here
 

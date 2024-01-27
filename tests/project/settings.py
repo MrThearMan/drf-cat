@@ -78,5 +78,8 @@ USE_TZ = True
 STATIC_URL = "/static/"
 
 CAT_SETTINGS = {
+    "CA_NAME": "ca",
     "CAT_ROOT_KEY": "foo",
+    "SERVICE_NAME": "client",
+    "SERVICE_TYPE": "backend",
 }

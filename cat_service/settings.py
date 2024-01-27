@@ -1,5 +1,6 @@
 from typing import Any, Callable
 
+from django.core.exceptions import ImproperlyConfigured
 from django.test.signals import setting_changed
 from settings_holder import SettingsHolder, reload_settings
 
@@ -22,6 +23,8 @@ class DefaultSettings(NamedTuple):
     """Type this service is."""
     SERVICE_NAME: str = ""
     """Name of this service."""
+    SERVICE_ORGANIZATION: str = ""
+    """Name of the organization this service belongs to."""
     VERIFICATION_KEY_URL: str = ""
     """URL to the where service verification key can be fetched from."""
     PSEUDO_RANDOM_FUNCTION: str = "sha256"
@@ -50,6 +53,14 @@ cat_service_settings = SettingsHolder(
     import_strings=IMPORT_STRINGS,
     removed_settings=REMOVED_SETTINGS,
 )
+
+if cat_service_settings.SERVICE_NAME == "":  # pragma: no cover
+    msg = f"`{SETTING_NAME}['SERVICE_NAME']` must be set."
+    raise ImproperlyConfigured(msg)
+
+if cat_service_settings.SERVICE_TYPE == "":  # pragma: no cover
+    msg = f"`{SETTING_NAME}['SERVICE_TYPE']` must be set."
+    raise ImproperlyConfigured(msg)
 
 reload_my_settings = reload_settings(SETTING_NAME, cat_service_settings)
 setting_changed.connect(reload_my_settings)
