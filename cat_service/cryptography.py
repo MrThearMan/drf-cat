@@ -50,10 +50,6 @@ def create_client_private_key() -> ed25519.Ed25519PrivateKey:
 
 
 def create_csr(private_key: ed25519.Ed25519PrivateKey) -> x509.CertificateSigningRequest:
-    if cat_service_settings.SERVICE_NAME == "":  # pragma: no cover
-        msg = "`CAT_SETTINGS['SERVICE_NAME']` must be set."
-        raise ValueError(msg)
-
     subject: list[x509.NameAttribute] = [x509.NameAttribute(NameOID.COMMON_NAME, cat_service_settings.SERVICE_NAME)]
     if cat_service_settings.SERVICE_ORGANIZATION:  # pragma: no cover
         subject.append(x509.NameAttribute(NameOID.ORGANIZATION_NAME, cat_service_settings.SERVICE_ORGANIZATION))

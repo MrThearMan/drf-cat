@@ -11,5 +11,5 @@ def use_test_client_in_service_setup(client: Client):
         response.raise_for_status = lambda: None
         return response
 
-    with patch("cat_service.setup.httpx.post", side_effect=post) as mock:
+    with patch("cat_service.utils.httpx.post", side_effect=post) as mock:
         yield mock

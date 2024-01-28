@@ -1,5 +1,5 @@
 import sys
-from typing import Any, Callable, Iterable, NamedTuple, TypeAlias
+from typing import Any, Callable, ClassVar, Iterable, NamedTuple, TypeAlias
 
 if sys.version_info < (3, 11):
     from typing_extensions import Self
@@ -15,6 +15,7 @@ __all__ = [
     "Callable",
     "TypeAlias",
     "HeaderKey",
+    "ClassVar",
     "HeaderValue",
 ]
 

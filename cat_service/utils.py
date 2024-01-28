@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from django.utils.translation import gettext_lazy as __
+import httpx
 
 from . import known_headers
 from .settings import cat_service_settings
@@ -88,11 +88,22 @@ def as_human_readable_list(_values: Iterable[str], /, *, last_sep: str = "&") ->
     return output
 
 
-def get_cat_verification_key() -> str:
-    if cat_service_settings.VERIFICATION_KEY == "":
-        msg = __("Service not set up correctly.")
-        raise ValueError(msg) from None
+def get_cat_verification_key(*, force_refresh: bool = False) -> str:
+    """Get the verification key for a given service entity."""
+    if not force_refresh and cat_service_settings.VERIFICATION_KEY != "":
+        return cat_service_settings.VERIFICATION_KEY
 
+    url = cat_service_settings.VERIFICATION_KEY_URL
+    data = {
+        "type": cat_service_settings.SERVICE_TYPE,
+        "name": cat_service_settings.SERVICE_NAME,
+    }
+
+    response = httpx.post(url, json=data, follow_redirects=True)  # TODO: Add authentication
+    response.raise_for_status()
+
+    response_data = response.json()
+    cat_service_settings.VERIFICATION_KEY = response_data["verification_key"]
     return cat_service_settings.VERIFICATION_KEY
 
 

@@ -9,7 +9,7 @@ from rest_framework.reverse import reverse
 
 from cat_ca.cryptography import hmac
 from cat_service.cryptography import create_cat_header
-from cat_service.setup import get_verification_key
+from cat_service.utils import get_cat_verification_key
 from tests.factories import ServiceEntityFactory, UserFactory
 from tests.helpers import use_test_client_in_service_setup
 
@@ -76,9 +76,7 @@ def test_cat__authenticate_user(client: Client, settings):
     }
 
     with use_test_client_in_service_setup(client):
-        get_verification_key()
-
-    cat = create_cat_header(identity=identity, service_name=service_entity.type.name)
+        cat = create_cat_header(identity=identity, service_name=service_entity.type.name)
 
     url = reverse("example")
     response = client.get(
@@ -104,9 +102,7 @@ def test_cat__authenticate_user__cat_headers_in_bytes(client: Client, settings):
     }
 
     with use_test_client_in_service_setup(client):
-        get_verification_key()
-
-    cat = create_cat_header(identity=identity, service_name=service_entity.type.name)
+        cat = create_cat_header(identity=identity, service_name=service_entity.type.name)
 
     url = reverse("example")
     response = client.get(
@@ -131,20 +127,18 @@ def test_cat__authenticate_user__extra_info(client: Client, settings):
         "VERIFICATION_KEY_URL": reverse("cat_ca:cat_verification_key"),
     }
 
-    with use_test_client_in_service_setup(client):
-        get_verification_key()
-
     timestamp = datetime.datetime(2024, 1, 1).isoformat()
     valid_until = (datetime.datetime.now() + datetime.timedelta(minutes=5)).isoformat()
     nonce = secrets.token_urlsafe()
 
-    cat = create_cat_header(
-        identity=identity,
-        service_name=service_entity.type.name,
-        timestamp=timestamp,
-        valid_until=valid_until,
-        nonce=nonce,
-    )
+    with use_test_client_in_service_setup(client):
+        cat = create_cat_header(
+            identity=identity,
+            service_name=service_entity.type.name,
+            timestamp=timestamp,
+            valid_until=valid_until,
+            nonce=nonce,
+        )
 
     url = reverse("example")
     response = client.get(
@@ -171,7 +165,7 @@ def test_cat__authenticate_user__missing_service_type_setting(settings):
 
     msg = "`CAT_SETTINGS['SERVICE_TYPE']` must be set."
     with pytest.raises(ImproperlyConfigured, match=re.escape(msg)):
-        get_verification_key()
+        get_cat_verification_key()
 
 
 def test_cat__authenticate_user__missing_service_name_setting(settings):
@@ -185,7 +179,7 @@ def test_cat__authenticate_user__missing_service_name_setting(settings):
 
     msg = "`CAT_SETTINGS['SERVICE_NAME']` must be set."
     with pytest.raises(ImproperlyConfigured, match=re.escape(msg)):
-        get_verification_key()
+        get_cat_verification_key()
 
 
 def test_cat__authenticate_user__missing_verification_key_url_setting(settings):
@@ -199,7 +193,7 @@ def test_cat__authenticate_user__missing_verification_key_url_setting(settings):
 
     msg = "`CAT_SETTINGS['VERIFICATION_KEY_URL']` must be set."
     with pytest.raises(ImproperlyConfigured, match=re.escape(msg)):
-        get_verification_key()
+        get_cat_verification_key()
 
 
 def test_cat__authenticate_user__dont_request_new_if_set(client: Client, settings):
@@ -213,12 +207,12 @@ def test_cat__authenticate_user__dont_request_new_if_set(client: Client, setting
     }
 
     with use_test_client_in_service_setup(client) as client:
-        get_verification_key()
+        get_cat_verification_key()
 
     assert client.call_count == 1
 
     with use_test_client_in_service_setup(client) as client:
-        get_verification_key()
+        get_cat_verification_key()
 
     assert client.call_count == 0
 
@@ -234,12 +228,12 @@ def test_cat__authenticate_user__do_request_new_if_forced(client: Client, settin
     }
 
     with use_test_client_in_service_setup(client) as client:
-        get_verification_key()
+        get_cat_verification_key()
 
     assert client.call_count == 1
 
     with use_test_client_in_service_setup(client) as client:
-        get_verification_key(force_refresh=True)
+        get_cat_verification_key(force_refresh=True)
 
     assert client.call_count == 1
 
@@ -280,35 +274,12 @@ def test_cat__authenticate_user__invalid_auth_header(client: Client, settings, h
     }
 
     with use_test_client_in_service_setup(client):
-        get_verification_key()
+        get_cat_verification_key()
 
     url = reverse("example")
     response = client.get(url, HTTP_AUTHORIZATION=header)
 
     assert response.json() == {"detail": error}
-
-
-def test_cat__authenticate_user__server_has_no_verification_key(client: Client, settings):
-    user = UserFactory.create()
-    identity = str(user.pk)
-    service_entity = ServiceEntityFactory.create()
-
-    settings.CAT_SETTINGS = {
-        "CAT_ROOT_KEY": "foo",
-        "SERVICE_TYPE": service_entity.type.name,
-        "SERVICE_NAME": service_entity.name,
-        "VERIFICATION_KEY_URL": reverse("cat_ca:cat_verification_key"),
-    }
-
-    url = reverse("example")
-    response = client.get(
-        url,
-        HTTP_AUTHORIZATION="CAT foo",
-        HTTP_CAT_IDENTITY=identity,
-        HTTP_CAT_SERVICE_NAME=service_entity.type.name,
-    )
-
-    assert response.json() == {"detail": "Service not set up correctly."}
 
 
 def test_cat__authenticate_user__invalid_cat(client: Client, settings):
@@ -324,7 +295,7 @@ def test_cat__authenticate_user__invalid_cat(client: Client, settings):
     }
 
     with use_test_client_in_service_setup(client):
-        get_verification_key()
+        get_cat_verification_key()
 
     url = reverse("example")
     response = client.get(
@@ -350,7 +321,7 @@ def test_cat__authenticate_user__invalid_service_name(client: Client, settings):
     }
 
     with use_test_client_in_service_setup(client):
-        get_verification_key()
+        get_cat_verification_key()
 
     url = reverse("example")
     response = client.get(
@@ -376,7 +347,7 @@ def test_cat__authenticate_user__missing_service_name(client: Client, settings):
     }
 
     with use_test_client_in_service_setup(client):
-        get_verification_key()
+        get_cat_verification_key()
 
     url = reverse("example")
     response = client.get(
@@ -402,7 +373,7 @@ def test_cat__authenticate_user__invalid_identity(client: Client, settings):
     }
 
     with use_test_client_in_service_setup(client):
-        get_verification_key()
+        get_cat_verification_key()
 
     url = reverse("example")
     response = client.get(
@@ -427,7 +398,7 @@ def test_cat__authenticate_user__missing_identity(client: Client, settings):
     }
 
     with use_test_client_in_service_setup(client):
-        get_verification_key()
+        get_cat_verification_key()
 
     url = reverse("example")
     response = client.get(
@@ -452,7 +423,7 @@ def test_cat__authenticate_user__invalid_timestamp(client: Client, settings):
     }
 
     with use_test_client_in_service_setup(client):
-        get_verification_key()
+        get_cat_verification_key()
 
     url = reverse("example")
     response = client.get(
@@ -479,7 +450,7 @@ def test_cat__authenticate_user__invalid_valid_until(client: Client, settings):
     }
 
     with use_test_client_in_service_setup(client):
-        get_verification_key()
+        get_cat_verification_key()
 
     url = reverse("example")
     response = client.get(
@@ -506,7 +477,7 @@ def test_cat__authenticate_user__expired_valid_until(client: Client, settings):
     }
 
     with use_test_client_in_service_setup(client):
-        get_verification_key()
+        get_cat_verification_key()
 
     url = reverse("example")
     response = client.get(
@@ -533,7 +504,7 @@ def test_cat__authenticate_user__invalid_cat_header_chars(client: Client, settin
     }
 
     with use_test_client_in_service_setup(client):
-        get_verification_key()
+        get_cat_verification_key()
 
     cat = create_cat_header(identity=identity, service_name=service_entity.type.name)
 
@@ -560,7 +531,7 @@ def test_cat__authenticate_user__unrecognized_cat_header(client: Client, setting
     }
 
     with use_test_client_in_service_setup(client):
-        get_verification_key()
+        get_cat_verification_key()
 
     cat = create_cat_header(identity=identity, service_name=service_entity.type.name)
 
@@ -588,7 +559,7 @@ def test_cat__authenticate_user__validator_not_found(client: Client, settings):
     }
 
     with use_test_client_in_service_setup(client):
-        get_verification_key()
+        get_cat_verification_key()
 
     cat = create_cat_header(identity=identity, service_name=service_entity.type.name)
 
