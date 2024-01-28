@@ -6,6 +6,7 @@ authors = [
     "Matti Lamppu <lamppu.matti.akseli@gmail.com>",
 ]
 packages = [
+    { include = "cat_common" },
     { include = "cat_ca" },
     { include = "cat_service" },
 ]

@@ -1,5 +1,7 @@
 import datetime
 
+from cryptography import x509
+from cryptography.hazmat.primitives.asymmetric import ed25519
 from django.core.exceptions import ImproperlyConfigured
 from django.test.signals import setting_changed
 from settings_holder import SettingsHolder, reload_settings
@@ -21,16 +23,16 @@ class DefaultSettings(NamedTuple):
     """Name of the CA Organization."""
     CAT_ROOT_KEY: str = ""
     """Root key for CAT. Should be kept secret."""
-    PSEUDO_RANDOM_FUNCTION: str = "sha256"
-    """Pseudo random function to use for generating keys."""
-    AUTH_SCHEME: str = "CAT"
-    """Auth scheme to use in Authorization header."""
     CA_CERTIFICATE_VALIDITY_PERIOD: datetime.timedelta = datetime.timedelta(days=10)
     """How long the CA certificate is valid for."""
     CLIENT_CERTIFICATE_VALIDITY_PERIOD: datetime.timedelta = datetime.timedelta(days=10)
     """How long the client certificate is valid for."""
     LEEWAY: datetime.timedelta = datetime.timedelta(seconds=1)
     """How much leeway to give for validity before period."""
+    CA_CERTIFICATE: x509.Certificate | None = None
+    """The CA certificate."""
+    CA_PRIVATE_KEY: ed25519.Ed25519PrivateKey | None = None
+    """The CA private key."""
 
 
 DEFAULTS = DefaultSettings()._asdict()

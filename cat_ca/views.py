@@ -6,7 +6,7 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from cat_ca.cryptography import hmac
+from cat_ca.cryptography import create_cat_creation_key, create_cat_verification_key
 from cat_ca.exceptions import ServiceEntityNotFound, ServiceEntityTypeNotFound
 from cat_ca.models import ServiceEntity, ServiceEntityType
 from cat_ca.serializers import (
@@ -15,6 +15,7 @@ from cat_ca.serializers import (
     CATVerificationKeyInputSerializer,
     CATVerificationKeyOutputSerializer,
 )
+from cat_common.settings import cat_common_settings
 
 if TYPE_CHECKING:
     from rest_framework.request import Request
@@ -29,7 +30,17 @@ __all__ = [
 
 
 class PublicCertificateView(APIView):
-    pass  # TODO: implement
+    def get(self, request: Request, *args: Any, **kwargs: Any) -> Response:
+        # TODO: implement
+        data = {
+            "certificate": "",
+        }
+        return Response(data=data, status=200)
+
+
+class SignCertificateView(APIView):
+    def post(self, request: Request, *args: Any, **kwargs: Any) -> Response:
+        pass
 
 
 class CATVerificationKeyView(APIView):
@@ -43,7 +54,8 @@ class CATVerificationKeyView(APIView):
         if not ServiceEntity.objects.filter(type__name=input_data["type"], name=input_data["name"]).exists():
             raise ServiceEntityNotFound(entity_type=input_data["type"], name=input_data["name"])
 
-        verification_key = hmac(msg=input_data["type"])
+        verification_key = create_cat_verification_key(service=input_data["type"])
+
         output_data = {"verification_key": verification_key}
         response_output = CATVerificationKeyOutputSerializer(data=output_data)
         response_output.is_valid(raise_exception=True)
@@ -62,8 +74,9 @@ class CATCreationKeyView(APIView):
         if not ServiceEntityType.objects.filter(name=input_data["service"]).exists():
             raise ServiceEntityTypeNotFound(name=input_data["service"])
 
-        verification_key = hmac(msg=input_data["service"])
-        creation_key = hmac(msg=str(request.user.pk), key=verification_key)
+        identify = cat_common_settings.IDENTITY_CONVERTER(request.user.pk)
+        creation_key = create_cat_creation_key(identity=identify, service=input_data["service"])
+
         response_output = CATCreationKeyOutputSerializer(data={"creation_key": creation_key})
         response_output.is_valid(raise_exception=True)
 

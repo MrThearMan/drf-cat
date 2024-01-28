@@ -1,3 +1,5 @@
+from cryptography import x509
+from cryptography.hazmat.primitives.asymmetric import ed25519
 from django.core.exceptions import ImproperlyConfigured
 from django.test.signals import setting_changed
 from settings_holder import SettingsHolder, reload_settings
@@ -25,16 +27,16 @@ class DefaultSettings(NamedTuple):
     """Name of this service."""
     SERVICE_ORGANIZATION: str = ""
     """Name of the organization this service belongs to."""
-    PSEUDO_RANDOM_FUNCTION: str = "sha256"
-    """Pseudo random function to use for generating keys."""
     AUTH_SCHEME: str = "CAT"
     """Auth scheme to use in Authorization header."""
     ADDITIONAL_VALID_CAT_HEADERS: list[str] = []
     """Additional valid CAT headers in form: `CAT-{Name-In-Header-Case}`."""
     ADDITIONAL_REQUIRED_CAT_HEADERS: list[str] = []
     """Additional required CAT headers: in form `CAT-{Name-In-Header-Case}`"""
-    IDENTITY_CONVERTER: Callable[[str], Any] = str
-    """Function to convert identity value to the required type."""
+    SERVICE_CERTIFICATE: x509.Certificate | None = None
+    """The service certificate."""
+    SERVICE_PRIVATE_KEY: ed25519.Ed25519PrivateKey | None = None
+    """The service private key."""
 
 
 DEFAULTS = DefaultSettings()._asdict()

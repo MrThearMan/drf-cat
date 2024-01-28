@@ -7,7 +7,7 @@ from django.core.exceptions import ImproperlyConfigured
 from django.test.client import Client
 from rest_framework.reverse import reverse
 
-from cat_ca.cryptography import hmac
+from cat_ca.cryptography import create_cat_creation_key, create_cat_verification_key
 from cat_service.cryptography import create_cat_header
 from cat_service.utils import get_cat_verification_key
 from tests.factories import ServiceEntityFactory, UserFactory
@@ -20,7 +20,7 @@ pytestmark = [
 
 def test_cat__get_service_verification_key(client: Client):
     service_entity = ServiceEntityFactory.create()
-    verification_key = hmac(msg=service_entity.type.name)
+    verification_key = create_cat_verification_key(service=service_entity.type.name)
 
     data = {"type": service_entity.type.name, "name": service_entity.name}
     url = reverse("cat_ca:cat_verification_key")
@@ -42,8 +42,7 @@ def test_cat__get_creation_key(client: Client):
     client.force_login(user=user)
 
     service_entity = ServiceEntityFactory.create()
-    verification_key = hmac(msg=service_entity.type.name)
-    creation_key = hmac(msg=str(user.pk), key=verification_key)
+    creation_key = create_cat_creation_key(identity=str(user.pk), service=service_entity.type.name)
 
     data = {"service": service_entity.type.name}
     url = reverse("cat_ca:cat_creation_key")
@@ -128,7 +127,7 @@ def test_cat__authenticate_user__extra_info(client: Client, settings):
     }
 
     timestamp = datetime.datetime(2024, 1, 1).isoformat()
-    valid_until = (datetime.datetime.now() + datetime.timedelta(minutes=5)).isoformat()
+    valid_until = (datetime.datetime.now(tz=datetime.timezone.utc) + datetime.timedelta(minutes=5)).isoformat()
     nonce = secrets.token_urlsafe()
 
     with use_test_client_in_service_setup(client):

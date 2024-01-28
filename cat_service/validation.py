@@ -6,6 +6,7 @@ from typing import TYPE_CHECKING, Any
 from django.utils.translation import gettext_lazy as __
 from rest_framework.exceptions import AuthenticationFailed
 
+from cat_common.settings import cat_common_settings
 from cat_service import error_codes
 from cat_service.settings import cat_service_settings
 
@@ -23,7 +24,7 @@ __all__ = [
 
 def validate_identity(identity: str) -> Any:
     try:
-        return cat_service_settings.IDENTITY_CONVERTER(identity.strip())
+        return cat_common_settings.IDENTITY_CONVERTER(identity.strip())
     except Exception as error:  # noqa: BLE001
         msg = __("Invalid identity value: '%(identity)s'. Could not convert to required type.")
         msg %= {"identity": identity}
@@ -55,7 +56,7 @@ def validate_valid_until(timestamp: str) -> datetime.datetime:
     if valid_until.tzinfo is None:
         valid_until.replace(tzinfo=datetime.timezone.utc)
 
-    if valid_until.astimezone(datetime.timezone.utc) < datetime.datetime.now(tz=datetime.timezone.utc):
+    if valid_until.astimezone(tz=datetime.timezone.utc) < datetime.datetime.now(tz=datetime.timezone.utc):
         msg = __("'CAT-Valid-Until' header indicates that the request is no longer valid.")
         raise AuthenticationFailed(msg, code=error_codes.CAT_EXPIRED) from None
 
