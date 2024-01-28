@@ -9,8 +9,10 @@ from rest_framework.response import Response
 
 @contextmanager
 def use_test_client_for_http(client: Client):
-    def post(url_, json, follow_redirects, **kwargs):
-        response = client.post(url_, data=json, follow=follow_redirects, **kwargs)
+    def post(url, json, follow_redirects, **kwargs):
+        if "headers" in kwargs and "Authorization" in kwargs["headers"]:
+            kwargs["HTTP_AUTHORIZATION"] = kwargs["headers"]["Authorization"]
+        response = client.post(url, data=json, follow=follow_redirects, **kwargs)
         response.raise_for_status = partial(raise_for_status, response)
         return response
 
