@@ -7,7 +7,8 @@ from django.utils.translation import gettext_lazy as __
 from rest_framework.authentication import BaseAuthentication
 from rest_framework.exceptions import AuthenticationFailed
 
-from cat_service import error_codes, known_headers
+from cat_common import error_codes, known_headers
+from cat_common.utils import get_authorization_header
 from cat_service.cryptography import create_cat
 from cat_service.settings import cat_service_settings
 from cat_service.utils import (
@@ -28,14 +29,13 @@ from cat_service.validation import (
 if TYPE_CHECKING:
     from rest_framework.request import Request
 
-    from .typing import Any, ClassVar, HeaderKey, HeaderValue, Validator
+    from cat_common.typing import Any, ClassVar, HeaderKey, HeaderValue, Validator
 
 User = get_user_model()
 
 
 __all__ = [
     "CATAuthentication",
-    "get_authorization_header",
     "get_cat_headers",
 ]
 
@@ -69,10 +69,9 @@ class CATAuthentication(BaseAuthentication):
     }
 
     def authenticate(self, request: Request) -> tuple[User, None] | None:
-        authorization_header = get_authorization_header(request)
+        scheme, token = get_authorization_header(request)
         cat_headers = get_cat_headers(request)
 
-        scheme, token = split_auth_header(authorization_header)
         self.validate_auth_scheme(scheme)
         cat_info = self.validate_cat_headers(cat_headers)
         self.validate_cat_token(token, cat_headers)
@@ -86,9 +85,9 @@ class CATAuthentication(BaseAuthentication):
         return user, None
 
     def validate_auth_scheme(self, scheme: str) -> None:
-        if scheme.casefold() != cat_service_settings.AUTH_SCHEME.casefold():
+        if scheme.casefold() != self.auth_scheme.casefold():
             msg = __("Invalid auth scheme: '%(scheme)s'. Accepted: '%(accepted_scheme)s'.")
-            msg %= {"scheme": scheme, "accepted_scheme": cat_service_settings.AUTH_SCHEME}
+            msg %= {"scheme": scheme, "accepted_scheme": self.auth_scheme}
             raise AuthenticationFailed(msg, code=error_codes.INVALID_AUTH_SCHEME) from None
 
     def validate_cat_headers(self, cat_headers: dict[HeaderKey, HeaderValue]) -> dict[HeaderKey, Any]:
@@ -133,37 +132,6 @@ class CATAuthentication(BaseAuthentication):
 
     def authenticate_header(self, request: Request) -> str:
         return self.auth_scheme
-
-
-def get_authorization_header(request: Request) -> str:
-    """
-    Return request's 'Authorization' header as a string.
-
-    :raises AuthenticationFailed: The header is not valid ASCII.
-    """
-    authorization: str | bytes = request.META.get("HTTP_AUTHORIZATION", "")
-    if isinstance(authorization, bytes):
-        try:
-            return authorization.decode()
-        except UnicodeError as error:
-            msg = __("Invalid Authorization header. Should not contain non-ASCII characters.")
-            raise AuthenticationFailed(msg, code=error_codes.INVALID_AUTH_HEADER) from error
-    return authorization
-
-
-def split_auth_header(authorization_header: str) -> tuple[str, str]:
-    """
-    Split authorization header into the scheme and token.
-
-    :raises AuthenticationFailed: Invalid CAT header.
-    """
-    try:
-        scheme, token = authorization_header.strip().split()
-    except ValueError as error:
-        msg = __("Invalid Authorization header. Must be of form: '%(scheme)s <token>'.")
-        msg %= {"scheme": cat_service_settings.AUTH_SCHEME}
-        raise AuthenticationFailed(msg, code=error_codes.INVALID_AUTH_HEADER) from error
-    return scheme, token
 
 
 def get_cat_headers(request: Request) -> dict[HeaderKey, HeaderValue]:

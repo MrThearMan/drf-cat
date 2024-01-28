@@ -6,7 +6,7 @@ from django.core.exceptions import ImproperlyConfigured
 from django.test.signals import setting_changed
 from settings_holder import SettingsHolder, reload_settings
 
-from cat_ca.typing import NamedTuple
+from cat_common.typing import Any, Callable, NamedTuple
 
 __all__ = [
     "cat_ca_settings",
@@ -37,24 +37,26 @@ class DefaultSettings(NamedTuple):
 
 DEFAULTS = DefaultSettings()._asdict()
 
-IMPORT_STRINGS: set[bytes | str] = set()
 
-REMOVED_SETTINGS: set[str] = set()
+def validate_required(name: str) -> Callable[[Any], None]:
+    def validate_value(value: str) -> None:  # pragma: no cover
+        if value == "":
+            msg = f"`{SETTING_NAME}['{name}']` must be set."
+            raise ImproperlyConfigured(msg)
+
+    return validate_value
+
+
+validators: dict[str, Callable[[Any], None]] = {
+    "CA_NAME": validate_required("CA_NAME"),
+    "CAT_ROOT_KEY": validate_required("CAT_ROOT_KEY"),
+}
 
 cat_ca_settings = SettingsHolder(
     setting_name=SETTING_NAME,
     defaults=DEFAULTS,
-    import_strings=IMPORT_STRINGS,
-    removed_settings=REMOVED_SETTINGS,
+    validators=validators,
 )
-
-if cat_ca_settings.CA_NAME == "":  # pragma: no cover
-    msg = f"`{SETTING_NAME}['CA_NAME']` must be set."
-    raise ImproperlyConfigured(msg)
-
-if cat_ca_settings.CAT_ROOT_KEY == "":  # pragma: no cover
-    msg = f"`{SETTING_NAME}['CAT_ROOT_KEY']` must be set."
-    raise ImproperlyConfigured(msg)
 
 reload_my_settings = reload_settings(SETTING_NAME, cat_ca_settings)
 setting_changed.connect(reload_my_settings)

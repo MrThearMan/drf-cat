@@ -2,13 +2,13 @@ from __future__ import annotations
 
 import json
 
+import httpx
 from cryptography import x509
 from cryptography.hazmat._oid import NameOID
 from cryptography.hazmat.primitives.asymmetric import ed25519
 
-from cat_common.cryptography import hmac
+from cat_common.cryptography import deserialize_certificate, hmac, serialize_certificate, serialize_csr
 from cat_service.settings import cat_service_settings
-from cat_service.utils import get_cat_verification_key
 
 __all__ = [
     "create_cat",
@@ -16,6 +16,30 @@ __all__ = [
     "create_csr",
     "get_cat_creation_key",
 ]
+
+
+def get_cat_verification_key(*, force_refresh: bool = False) -> str:
+    """Get the verification key for a given service entity."""
+    if not force_refresh and cat_service_settings.VERIFICATION_KEY != "":
+        return cat_service_settings.VERIFICATION_KEY
+
+    url = cat_service_settings.VERIFICATION_KEY_URL
+    data = {
+        "type": cat_service_settings.SERVICE_TYPE,
+        "name": cat_service_settings.SERVICE_NAME,
+    }
+
+    certificate = cat_service_settings.SERVICE_CERTIFICATE
+    if certificate is None:
+        certificate = get_certificate()
+
+    headers = {"Authorization": f"Certificate {serialize_certificate(certificate)}"}
+    response = httpx.post(url, json=data, follow_redirects=True, headers=headers)
+    response.raise_for_status()
+
+    response_data = response.json()
+    cat_service_settings.VERIFICATION_KEY = response_data["verification_key"]
+    return cat_service_settings.VERIFICATION_KEY
 
 
 def get_cat_creation_key(*, identity: str) -> str:
@@ -34,6 +58,24 @@ def create_cat(*, identity: str, service_name: str, **kwargs: str) -> str:
 def create_cat_header(*, identity: str, service_name: str, **kwargs: str) -> str:
     cat = create_cat(identity=identity, service_name=service_name, **kwargs)
     return f"{cat_service_settings.AUTH_SCHEME} {cat}"
+
+
+def get_certificate(*, force_refresh: bool = False) -> x509.Certificate:
+    if not force_refresh and cat_service_settings.SERVICE_CERTIFICATE is not None:  # pragma: no cover
+        # TODO: Validate that certificate is still valid.
+        return cat_service_settings.SERVICE_CERTIFICATE
+
+    csr = create_csr()
+    url = cat_service_settings.CERTIFICATE_URL
+    data = {"csr": serialize_csr(csr)}
+
+    response = httpx.post(url, json=data, follow_redirects=True)
+    response.raise_for_status()
+
+    response_data = response.json()
+    # TODO: Validate that the certificate was signed by what we expect.
+    cat_service_settings.SERVICE_CERTIFICATE = deserialize_certificate(response_data["certificate"])
+    return cat_service_settings.SERVICE_CERTIFICATE
 
 
 def create_csr() -> x509.CertificateSigningRequest:

@@ -5,34 +5,35 @@ import secrets
 import pytest
 from django.core.exceptions import ImproperlyConfigured
 from django.test.client import Client
+from httpx import HTTPStatusError
 from rest_framework.reverse import reverse
 
-from cat_ca.cryptography import create_cat_creation_key, create_cat_verification_key
-from cat_service.cryptography import create_cat_header
-from cat_service.utils import get_cat_verification_key
+from cat_ca.cryptography import create_cat_creation_key, create_cat_verification_key, get_ca_certificate
+from cat_ca.settings import cat_ca_settings
+from cat_service.cryptography import create_cat_header, get_cat_verification_key
 from tests.factories import ServiceEntityFactory, UserFactory
-from tests.helpers import use_test_client_in_service_setup
+from tests.helpers import use_test_client_for_http
 
 pytestmark = [
     pytest.mark.django_db,
 ]
 
 
-def test_cat__get_service_verification_key(client: Client):
+def test_cat__get_service_verification_key(client: Client, client_cert_header):
     service_entity = ServiceEntityFactory.create()
     verification_key = create_cat_verification_key(service=service_entity.type.name)
 
     data = {"type": service_entity.type.name, "name": service_entity.name}
     url = reverse("cat_ca:cat_verification_key")
-    response = client.post(url, data=data)
+    response = client.post(url, data=data, HTTP_AUTHORIZATION=client_cert_header)
 
     assert response.json() == {"verification_key": verification_key}
 
 
-def test_cat__get_service_verification_key__service_entity_missing(client: Client):
+def test_cat__get_service_verification_key__service_entity_missing(client: Client, client_cert_header):
     data = {"type": "foo", "name": "bar"}
     url = reverse("cat_ca:cat_verification_key")
-    response = client.post(url, data=data)
+    response = client.post(url, data=data, HTTP_AUTHORIZATION=client_cert_header)
 
     assert response.json() == {"detail": "Service entity of type 'foo' with name 'bar' not found."}
 
@@ -66,15 +67,19 @@ def test_cat__authenticate_user(client: Client, settings):
     user = UserFactory.create()
     identity = str(user.pk)
     service_entity = ServiceEntityFactory.create()
+    certificate = get_ca_certificate()
 
     settings.CAT_SETTINGS = {
         "CAT_ROOT_KEY": "foo",
         "SERVICE_TYPE": service_entity.type.name,
         "SERVICE_NAME": service_entity.name,
         "VERIFICATION_KEY_URL": reverse("cat_ca:cat_verification_key"),
+        "CERTIFICATE_URL": reverse("cat_ca:cat_certificate"),
+        "CA_CERTIFICATE": certificate,
+        "CA_PRIVATE_KEY": cat_ca_settings.CA_PRIVATE_KEY,
     }
 
-    with use_test_client_in_service_setup(client):
+    with use_test_client_for_http(client):
         cat = create_cat_header(identity=identity, service_name=service_entity.type.name)
 
     url = reverse("example")
@@ -92,15 +97,19 @@ def test_cat__authenticate_user__cat_headers_in_bytes(client: Client, settings):
     user = UserFactory.create()
     identity = str(user.pk)
     service_entity = ServiceEntityFactory.create()
+    certificate = get_ca_certificate()
 
     settings.CAT_SETTINGS = {
         "CAT_ROOT_KEY": "foo",
         "SERVICE_TYPE": service_entity.type.name,
         "SERVICE_NAME": service_entity.name,
         "VERIFICATION_KEY_URL": reverse("cat_ca:cat_verification_key"),
+        "CERTIFICATE_URL": reverse("cat_ca:cat_certificate"),
+        "CA_CERTIFICATE": certificate,
+        "CA_PRIVATE_KEY": cat_ca_settings.CA_PRIVATE_KEY,
     }
 
-    with use_test_client_in_service_setup(client):
+    with use_test_client_for_http(client):
         cat = create_cat_header(identity=identity, service_name=service_entity.type.name)
 
     url = reverse("example")
@@ -118,19 +127,23 @@ def test_cat__authenticate_user__extra_info(client: Client, settings):
     user = UserFactory.create()
     identity = str(user.pk)
     service_entity = ServiceEntityFactory.create()
+    certificate = get_ca_certificate()
 
     settings.CAT_SETTINGS = {
         "CAT_ROOT_KEY": "foo",
         "SERVICE_TYPE": service_entity.type.name,
         "SERVICE_NAME": service_entity.name,
         "VERIFICATION_KEY_URL": reverse("cat_ca:cat_verification_key"),
+        "CERTIFICATE_URL": reverse("cat_ca:cat_certificate"),
+        "CA_CERTIFICATE": certificate,
+        "CA_PRIVATE_KEY": cat_ca_settings.CA_PRIVATE_KEY,
     }
 
     timestamp = datetime.datetime(2024, 1, 1).isoformat()
     valid_until = (datetime.datetime.now(tz=datetime.timezone.utc) + datetime.timedelta(minutes=5)).isoformat()
     nonce = secrets.token_urlsafe()
 
-    with use_test_client_in_service_setup(client):
+    with use_test_client_for_http(client):
         cat = create_cat_header(
             identity=identity,
             service_name=service_entity.type.name,
@@ -155,11 +168,15 @@ def test_cat__authenticate_user__extra_info(client: Client, settings):
 
 def test_cat__authenticate_user__missing_service_type_setting(settings):
     service_entity = ServiceEntityFactory.create()
+    certificate = get_ca_certificate()
 
     settings.CAT_SETTINGS = {
         "CAT_ROOT_KEY": "foo",
         "SERVICE_NAME": service_entity.name,
         "VERIFICATION_KEY_URL": reverse("cat_ca:cat_verification_key"),
+        "CERTIFICATE_URL": reverse("cat_ca:cat_certificate"),
+        "CA_CERTIFICATE": certificate,
+        "CA_PRIVATE_KEY": cat_ca_settings.CA_PRIVATE_KEY,
     }
 
     msg = "`CAT_SETTINGS['SERVICE_TYPE']` must be set."
@@ -169,11 +186,15 @@ def test_cat__authenticate_user__missing_service_type_setting(settings):
 
 def test_cat__authenticate_user__missing_service_name_setting(settings):
     service_entity = ServiceEntityFactory.create()
+    certificate = get_ca_certificate()
 
     settings.CAT_SETTINGS = {
         "CAT_ROOT_KEY": "foo",
         "SERVICE_TYPE": service_entity.type.name,
         "VERIFICATION_KEY_URL": reverse("cat_ca:cat_verification_key"),
+        "CERTIFICATE_URL": reverse("cat_ca:cat_certificate"),
+        "CA_CERTIFICATE": certificate,
+        "CA_PRIVATE_KEY": cat_ca_settings.CA_PRIVATE_KEY,
     }
 
     msg = "`CAT_SETTINGS['SERVICE_NAME']` must be set."
@@ -183,11 +204,15 @@ def test_cat__authenticate_user__missing_service_name_setting(settings):
 
 def test_cat__authenticate_user__missing_verification_key_url_setting(settings):
     service_entity = ServiceEntityFactory.create()
+    certificate = get_ca_certificate()
 
     settings.CAT_SETTINGS = {
         "CAT_ROOT_KEY": "foo",
         "SERVICE_TYPE": service_entity.type.name,
         "SERVICE_NAME": service_entity.name,
+        "CERTIFICATE_URL": reverse("cat_ca:cat_certificate"),
+        "CA_CERTIFICATE": certificate,
+        "CA_PRIVATE_KEY": cat_ca_settings.CA_PRIVATE_KEY,
     }
 
     msg = "`CAT_SETTINGS['VERIFICATION_KEY_URL']` must be set."
@@ -195,46 +220,113 @@ def test_cat__authenticate_user__missing_verification_key_url_setting(settings):
         get_cat_verification_key()
 
 
-def test_cat__authenticate_user__dont_request_new_if_set(client: Client, settings):
+def test_cat__authenticate_user__missing_certificate_url(settings):
     service_entity = ServiceEntityFactory.create()
+    certificate = get_ca_certificate()
 
     settings.CAT_SETTINGS = {
         "CAT_ROOT_KEY": "foo",
         "SERVICE_TYPE": service_entity.type.name,
         "SERVICE_NAME": service_entity.name,
         "VERIFICATION_KEY_URL": reverse("cat_ca:cat_verification_key"),
+        "CA_CERTIFICATE": certificate,
+        "CA_PRIVATE_KEY": cat_ca_settings.CA_PRIVATE_KEY,
     }
 
-    with use_test_client_in_service_setup(client) as client:
+    msg = "`CAT_SETTINGS['CERTIFICATE_URL']` must be set."
+    with pytest.raises(ImproperlyConfigured, match=re.escape(msg)):
         get_cat_verification_key()
 
-    assert client.call_count == 1
 
-    with use_test_client_in_service_setup(client) as client:
+def test_cat__authenticate_user__missing_ca_certificate(settings, client: Client):
+    service_entity = ServiceEntityFactory.create()
+    get_ca_certificate()
+
+    settings.CAT_SETTINGS = {
+        "CAT_ROOT_KEY": "foo",
+        "SERVICE_TYPE": service_entity.type.name,
+        "SERVICE_NAME": service_entity.name,
+        "VERIFICATION_KEY_URL": reverse("cat_ca:cat_verification_key"),
+        "CERTIFICATE_URL": reverse("cat_ca:cat_certificate"),
+        "CA_PRIVATE_KEY": cat_ca_settings.CA_PRIVATE_KEY,
+    }
+
+    msg = "CA does not have a certificate, cannot issue a client certificate."
+    with pytest.raises(HTTPStatusError, match=re.escape(msg)), use_test_client_for_http(client):
         get_cat_verification_key()
 
-    assert client.call_count == 0
+
+def test_cat__authenticate_user__missing_ca_private_key(settings, client: Client):
+    service_entity = ServiceEntityFactory.create()
+    certificate = get_ca_certificate()
+
+    settings.CAT_SETTINGS = {
+        "CAT_ROOT_KEY": "foo",
+        "SERVICE_TYPE": service_entity.type.name,
+        "SERVICE_NAME": service_entity.name,
+        "VERIFICATION_KEY_URL": reverse("cat_ca:cat_verification_key"),
+        "CERTIFICATE_URL": reverse("cat_ca:cat_certificate"),
+        "CA_CERTIFICATE": certificate,
+    }
+
+    msg = "CA does not have a private key, cannot sign client certificate."
+    with pytest.raises(HTTPStatusError, match=re.escape(msg)), use_test_client_for_http(client):
+        get_cat_verification_key()
+
+
+def test_cat__authenticate_user__dont_request_new_if_set(client: Client, settings):
+    service_entity = ServiceEntityFactory.create()
+    certificate = get_ca_certificate()
+
+    settings.CAT_SETTINGS = {
+        "CAT_ROOT_KEY": "foo",
+        "SERVICE_TYPE": service_entity.type.name,
+        "SERVICE_NAME": service_entity.name,
+        "VERIFICATION_KEY_URL": reverse("cat_ca:cat_verification_key"),
+        "CERTIFICATE_URL": reverse("cat_ca:cat_certificate"),
+        "CA_CERTIFICATE": certificate,
+        "CA_PRIVATE_KEY": cat_ca_settings.CA_PRIVATE_KEY,
+    }
+
+    with use_test_client_for_http(client) as http:
+        get_cat_verification_key()
+
+    # 1 call for the certificate.
+    # 1 call for the verification key.
+    assert http.call_count == 2
+
+    with use_test_client_for_http(client) as http:
+        get_cat_verification_key()
+
+    assert http.call_count == 0
 
 
 def test_cat__authenticate_user__do_request_new_if_forced(client: Client, settings):
     service_entity = ServiceEntityFactory.create()
+    certificate = get_ca_certificate()
 
     settings.CAT_SETTINGS = {
         "CAT_ROOT_KEY": "foo",
         "SERVICE_TYPE": service_entity.type.name,
         "SERVICE_NAME": service_entity.name,
         "VERIFICATION_KEY_URL": reverse("cat_ca:cat_verification_key"),
+        "CERTIFICATE_URL": reverse("cat_ca:cat_certificate"),
+        "CA_CERTIFICATE": certificate,
+        "CA_PRIVATE_KEY": cat_ca_settings.CA_PRIVATE_KEY,
     }
 
-    with use_test_client_in_service_setup(client) as client:
+    with use_test_client_for_http(client) as http:
         get_cat_verification_key()
 
-    assert client.call_count == 1
+    # 1 call for the certificate.
+    # 1 call for the verification key.
+    assert http.call_count == 2
 
-    with use_test_client_in_service_setup(client) as client:
+    with use_test_client_for_http(client) as http:
         get_cat_verification_key(force_refresh=True)
 
-    assert client.call_count == 1
+    # 1 call for the certificate.
+    assert http.call_count == 1
 
 
 @pytest.mark.parametrize(
@@ -246,15 +338,15 @@ def test_cat__authenticate_user__do_request_new_if_forced(client: Client, settin
         ),
         (
             "",
-            "Invalid Authorization header. Must be of form: 'CAT <token>'.",
+            "Missing Authorization header.",
         ),
         (
             "foo",
-            "Invalid Authorization header. Must be of form: 'CAT <token>'.",
+            "Invalid Authorization header. Must be of form: '<scheme> <token>'.",
         ),
         (
             "foo bar baz",
-            "Invalid Authorization header. Must be of form: 'CAT <token>'.",
+            "Invalid Authorization header. Must be of form: '<scheme> <token>'.",
         ),
         (
             "Token foo",
@@ -264,15 +356,19 @@ def test_cat__authenticate_user__do_request_new_if_forced(client: Client, settin
 )
 def test_cat__authenticate_user__invalid_auth_header(client: Client, settings, header, error):
     service_entity = ServiceEntityFactory.create()
+    certificate = get_ca_certificate()
 
     settings.CAT_SETTINGS = {
         "CAT_ROOT_KEY": "foo",
         "SERVICE_TYPE": service_entity.type.name,
         "SERVICE_NAME": service_entity.name,
         "VERIFICATION_KEY_URL": reverse("cat_ca:cat_verification_key"),
+        "CERTIFICATE_URL": reverse("cat_ca:cat_certificate"),
+        "CA_CERTIFICATE": certificate,
+        "CA_PRIVATE_KEY": cat_ca_settings.CA_PRIVATE_KEY,
     }
 
-    with use_test_client_in_service_setup(client):
+    with use_test_client_for_http(client):
         get_cat_verification_key()
 
     url = reverse("example")
@@ -285,15 +381,19 @@ def test_cat__authenticate_user__invalid_cat(client: Client, settings):
     user = UserFactory.create()
     identity = str(user.pk)
     service_entity = ServiceEntityFactory.create()
+    certificate = get_ca_certificate()
 
     settings.CAT_SETTINGS = {
         "CAT_ROOT_KEY": "foo",
         "SERVICE_TYPE": service_entity.type.name,
         "SERVICE_NAME": service_entity.name,
         "VERIFICATION_KEY_URL": reverse("cat_ca:cat_verification_key"),
+        "CERTIFICATE_URL": reverse("cat_ca:cat_certificate"),
+        "CA_CERTIFICATE": certificate,
+        "CA_PRIVATE_KEY": cat_ca_settings.CA_PRIVATE_KEY,
     }
 
-    with use_test_client_in_service_setup(client):
+    with use_test_client_for_http(client):
         get_cat_verification_key()
 
     url = reverse("example")
@@ -311,15 +411,19 @@ def test_cat__authenticate_user__invalid_service_name(client: Client, settings):
     user = UserFactory.create()
     identity = str(user.pk)
     service_entity = ServiceEntityFactory.create()
+    certificate = get_ca_certificate()
 
     settings.CAT_SETTINGS = {
         "CAT_ROOT_KEY": "foo",
         "SERVICE_TYPE": service_entity.type.name,
         "SERVICE_NAME": service_entity.name,
         "VERIFICATION_KEY_URL": reverse("cat_ca:cat_verification_key"),
+        "CERTIFICATE_URL": reverse("cat_ca:cat_certificate"),
+        "CA_CERTIFICATE": certificate,
+        "CA_PRIVATE_KEY": cat_ca_settings.CA_PRIVATE_KEY,
     }
 
-    with use_test_client_in_service_setup(client):
+    with use_test_client_for_http(client):
         get_cat_verification_key()
 
     url = reverse("example")
@@ -337,15 +441,19 @@ def test_cat__authenticate_user__missing_service_name(client: Client, settings):
     user = UserFactory.create()
     identity = str(user.pk)
     service_entity = ServiceEntityFactory.create()
+    certificate = get_ca_certificate()
 
     settings.CAT_SETTINGS = {
         "CAT_ROOT_KEY": "foo",
         "SERVICE_TYPE": service_entity.type.name,
         "SERVICE_NAME": service_entity.name,
         "VERIFICATION_KEY_URL": reverse("cat_ca:cat_verification_key"),
+        "CERTIFICATE_URL": reverse("cat_ca:cat_certificate"),
+        "CA_CERTIFICATE": certificate,
+        "CA_PRIVATE_KEY": cat_ca_settings.CA_PRIVATE_KEY,
     }
 
-    with use_test_client_in_service_setup(client):
+    with use_test_client_for_http(client):
         get_cat_verification_key()
 
     url = reverse("example")
@@ -362,16 +470,20 @@ def test_cat__authenticate_user__invalid_identity(client: Client, settings):
     user = UserFactory.create()
     identity = str(user.pk)
     service_entity = ServiceEntityFactory.create()
+    certificate = get_ca_certificate()
 
     settings.CAT_SETTINGS = {
         "CAT_ROOT_KEY": "foo",
         "SERVICE_TYPE": service_entity.type.name,
         "SERVICE_NAME": service_entity.name,
         "VERIFICATION_KEY_URL": reverse("cat_ca:cat_verification_key"),
+        "CERTIFICATE_URL": reverse("cat_ca:cat_certificate"),
         "IDENTITY_CONVERTER": int,
+        "CA_CERTIFICATE": certificate,
+        "CA_PRIVATE_KEY": cat_ca_settings.CA_PRIVATE_KEY,
     }
 
-    with use_test_client_in_service_setup(client):
+    with use_test_client_for_http(client):
         get_cat_verification_key()
 
     url = reverse("example")
@@ -387,16 +499,20 @@ def test_cat__authenticate_user__invalid_identity(client: Client, settings):
 
 def test_cat__authenticate_user__missing_identity(client: Client, settings):
     service_entity = ServiceEntityFactory.create()
+    certificate = get_ca_certificate()
 
     settings.CAT_SETTINGS = {
         "CAT_ROOT_KEY": "foo",
         "SERVICE_TYPE": service_entity.type.name,
         "SERVICE_NAME": service_entity.name,
         "VERIFICATION_KEY_URL": reverse("cat_ca:cat_verification_key"),
+        "CERTIFICATE_URL": reverse("cat_ca:cat_certificate"),
         "IDENTITY_CONVERTER": int,
+        "CA_CERTIFICATE": certificate,
+        "CA_PRIVATE_KEY": cat_ca_settings.CA_PRIVATE_KEY,
     }
 
-    with use_test_client_in_service_setup(client):
+    with use_test_client_for_http(client):
         get_cat_verification_key()
 
     url = reverse("example")
@@ -413,15 +529,19 @@ def test_cat__authenticate_user__invalid_timestamp(client: Client, settings):
     user = UserFactory.create()
     identity = str(user.pk)
     service_entity = ServiceEntityFactory.create()
+    certificate = get_ca_certificate()
 
     settings.CAT_SETTINGS = {
         "CAT_ROOT_KEY": "foo",
         "SERVICE_TYPE": service_entity.type.name,
         "SERVICE_NAME": service_entity.name,
         "VERIFICATION_KEY_URL": reverse("cat_ca:cat_verification_key"),
+        "CERTIFICATE_URL": reverse("cat_ca:cat_certificate"),
+        "CA_CERTIFICATE": certificate,
+        "CA_PRIVATE_KEY": cat_ca_settings.CA_PRIVATE_KEY,
     }
 
-    with use_test_client_in_service_setup(client):
+    with use_test_client_for_http(client):
         get_cat_verification_key()
 
     url = reverse("example")
@@ -440,15 +560,19 @@ def test_cat__authenticate_user__invalid_valid_until(client: Client, settings):
     user = UserFactory.create()
     identity = str(user.pk)
     service_entity = ServiceEntityFactory.create()
+    certificate = get_ca_certificate()
 
     settings.CAT_SETTINGS = {
         "CAT_ROOT_KEY": "foo",
         "SERVICE_TYPE": service_entity.type.name,
         "SERVICE_NAME": service_entity.name,
         "VERIFICATION_KEY_URL": reverse("cat_ca:cat_verification_key"),
+        "CERTIFICATE_URL": reverse("cat_ca:cat_certificate"),
+        "CA_CERTIFICATE": certificate,
+        "CA_PRIVATE_KEY": cat_ca_settings.CA_PRIVATE_KEY,
     }
 
-    with use_test_client_in_service_setup(client):
+    with use_test_client_for_http(client):
         get_cat_verification_key()
 
     url = reverse("example")
@@ -467,15 +591,19 @@ def test_cat__authenticate_user__expired_valid_until(client: Client, settings):
     user = UserFactory.create()
     identity = str(user.pk)
     service_entity = ServiceEntityFactory.create()
+    certificate = get_ca_certificate()
 
     settings.CAT_SETTINGS = {
         "CAT_ROOT_KEY": "foo",
         "SERVICE_TYPE": service_entity.type.name,
         "SERVICE_NAME": service_entity.name,
         "VERIFICATION_KEY_URL": reverse("cat_ca:cat_verification_key"),
+        "CERTIFICATE_URL": reverse("cat_ca:cat_certificate"),
+        "CA_CERTIFICATE": certificate,
+        "CA_PRIVATE_KEY": cat_ca_settings.CA_PRIVATE_KEY,
     }
 
-    with use_test_client_in_service_setup(client):
+    with use_test_client_for_http(client):
         get_cat_verification_key()
 
     url = reverse("example")
@@ -494,15 +622,19 @@ def test_cat__authenticate_user__invalid_cat_header_chars(client: Client, settin
     user = UserFactory.create()
     identity = str(user.pk)
     service_entity = ServiceEntityFactory.create()
+    certificate = get_ca_certificate()
 
     settings.CAT_SETTINGS = {
         "CAT_ROOT_KEY": "foo",
         "SERVICE_TYPE": service_entity.type.name,
         "SERVICE_NAME": service_entity.name,
         "VERIFICATION_KEY_URL": reverse("cat_ca:cat_verification_key"),
+        "CERTIFICATE_URL": reverse("cat_ca:cat_certificate"),
+        "CA_CERTIFICATE": certificate,
+        "CA_PRIVATE_KEY": cat_ca_settings.CA_PRIVATE_KEY,
     }
 
-    with use_test_client_in_service_setup(client):
+    with use_test_client_for_http(client):
         get_cat_verification_key()
 
     cat = create_cat_header(identity=identity, service_name=service_entity.type.name)
@@ -521,15 +653,19 @@ def test_cat__authenticate_user__unrecognized_cat_header(client: Client, setting
     user = UserFactory.create()
     identity = str(user.pk)
     service_entity = ServiceEntityFactory.create()
+    certificate = get_ca_certificate()
 
     settings.CAT_SETTINGS = {
         "CAT_ROOT_KEY": "foo",
         "SERVICE_TYPE": service_entity.type.name,
         "SERVICE_NAME": service_entity.name,
         "VERIFICATION_KEY_URL": reverse("cat_ca:cat_verification_key"),
+        "CERTIFICATE_URL": reverse("cat_ca:cat_certificate"),
+        "CA_CERTIFICATE": certificate,
+        "CA_PRIVATE_KEY": cat_ca_settings.CA_PRIVATE_KEY,
     }
 
-    with use_test_client_in_service_setup(client):
+    with use_test_client_for_http(client):
         get_cat_verification_key()
 
     cat = create_cat_header(identity=identity, service_name=service_entity.type.name)
@@ -548,16 +684,20 @@ def test_cat__authenticate_user__validator_not_found(client: Client, settings):
     user = UserFactory.create()
     identity = str(user.pk)
     service_entity = ServiceEntityFactory.create()
+    certificate = get_ca_certificate()
 
     settings.CAT_SETTINGS = {
         "CAT_ROOT_KEY": "foo",
         "SERVICE_TYPE": service_entity.type.name,
         "SERVICE_NAME": service_entity.name,
         "VERIFICATION_KEY_URL": reverse("cat_ca:cat_verification_key"),
+        "CERTIFICATE_URL": reverse("cat_ca:cat_certificate"),
         "ADDITIONAL_VALID_CAT_HEADERS": ["CAT-Food"],
+        "CA_CERTIFICATE": certificate,
+        "CA_PRIVATE_KEY": cat_ca_settings.CA_PRIVATE_KEY,
     }
 
-    with use_test_client_in_service_setup(client):
+    with use_test_client_for_http(client):
         get_cat_verification_key()
 
     cat = create_cat_header(identity=identity, service_name=service_entity.type.name)

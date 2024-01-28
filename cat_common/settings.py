@@ -3,7 +3,7 @@ from typing import Any, Callable
 from django.test.signals import setting_changed
 from settings_holder import SettingsHolder, reload_settings
 
-from cat_service.typing import NamedTuple
+from cat_common.typing import NamedTuple
 
 __all__ = [
     "cat_common_settings",
@@ -22,7 +22,10 @@ class DefaultSettings(NamedTuple):
 
 DEFAULTS = DefaultSettings()._asdict()
 
-cat_common_settings = SettingsHolder(setting_name=SETTING_NAME, defaults=DEFAULTS)
+cat_common_settings = SettingsHolder(
+    setting_name=SETTING_NAME,
+    defaults=DEFAULTS,
+)
 
 reload_my_settings = reload_settings(SETTING_NAME, cat_common_settings)
 setting_changed.connect(reload_my_settings)

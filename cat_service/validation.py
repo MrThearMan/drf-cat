@@ -6,12 +6,12 @@ from typing import TYPE_CHECKING, Any
 from django.utils.translation import gettext_lazy as __
 from rest_framework.exceptions import AuthenticationFailed
 
+from cat_common import error_codes
 from cat_common.settings import cat_common_settings
-from cat_service import error_codes
 from cat_service.settings import cat_service_settings
 
 if TYPE_CHECKING:
-    from .typing import Any
+    from cat_common.typing import Any
 
 __all__ = [
     "validate_identity",

@@ -26,6 +26,7 @@ def create_cat_creation_key(*, identity: str, service: str) -> str:
 
 def get_ca_certificate() -> x509.Certificate:
     if cat_ca_settings.CA_CERTIFICATE is not None:  # pragma: no cover
+        # TODO: Validate that certificate is still valid.
         return cat_ca_settings.CA_CERTIFICATE
 
     # Generate a new private key if one does not exist

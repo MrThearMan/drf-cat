@@ -4,9 +4,7 @@ from django.core.exceptions import ImproperlyConfigured
 from django.test.signals import setting_changed
 from settings_holder import SettingsHolder, reload_settings
 
-from cat_service.typing import NamedTuple
-
-from .typing import Any, Callable
+from cat_common.typing import Any, Callable, NamedTuple
 
 __all__ = [
     "cat_service_settings",
@@ -20,7 +18,9 @@ class DefaultSettings(NamedTuple):
     VERIFICATION_KEY: str = ""
     """Verification key for this service."""
     VERIFICATION_KEY_URL: str = ""
-    """URL to the where service verification key can be fetched from."""
+    """URL where service verification key can be fetched from."""
+    CERTIFICATE_URL: str = ""
+    """URL where service certificate can be fetched from."""
     SERVICE_TYPE: str = ""
     """Type this service is."""
     SERVICE_NAME: str = ""
@@ -41,10 +41,6 @@ class DefaultSettings(NamedTuple):
 
 DEFAULTS = DefaultSettings()._asdict()
 
-IMPORT_STRINGS: set[bytes | str] = set()
-
-REMOVED_SETTINGS: set[str] = set()
-
 
 def validate_required(name: str) -> Callable[[Any], None]:
     def validate_value(value: str) -> None:
@@ -59,13 +55,12 @@ validators: dict[str, Callable[[Any], None]] = {
     "SERVICE_NAME": validate_required("SERVICE_NAME"),
     "SERVICE_TYPE": validate_required("SERVICE_TYPE"),
     "VERIFICATION_KEY_URL": validate_required("VERIFICATION_KEY_URL"),
+    "CERTIFICATE_URL": validate_required("CERTIFICATE_URL"),
 }
 
 cat_service_settings = SettingsHolder(
     setting_name=SETTING_NAME,
     defaults=DEFAULTS,
-    import_strings=IMPORT_STRINGS,
-    removed_settings=REMOVED_SETTINGS,
     validators=validators,
 )
 

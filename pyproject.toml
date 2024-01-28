@@ -82,7 +82,7 @@ extend-exclude = [
     "tests/*",
 ]
 typing-modules = [
-    "cat.typing",
+    "cat_common.typing",
 ]
 select = [
     "A",        # flake8-builtins

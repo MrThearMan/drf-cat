@@ -1,6 +1,8 @@
 CAT_EXPIRED = "cat_expired"
+MISSING_AUTH_HEADER = "missing_auth_header"
 INVALID_AUTH_HEADER = "invalid_auth_header"
 INVALID_AUTH_SCHEME = "invalid_auth_scheme"
+INVALID_CERTIFICATE = "invalid_certificate"
 INVALID_CAT = "invalid_cat"
 INVALID_CAT_HEADER = "invalid_cat_header"
 INVALID_IDENTITY = "invalid_identity"

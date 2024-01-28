@@ -2,13 +2,11 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-import httpx
-
-from . import known_headers
-from .settings import cat_service_settings
+from cat_common import known_headers
+from cat_service.settings import cat_service_settings
 
 if TYPE_CHECKING:
-    from .typing import Iterable
+    from cat_common.typing import Iterable
 
 
 __all__ = [
@@ -16,7 +14,6 @@ __all__ = [
     "snake_case_to_header_case",
     "header_case_to_snake_case",
     "as_human_readable_list",
-    "get_cat_verification_key",
     "get_required_cat_headers",
     "get_valid_cat_headers",
 ]
@@ -86,25 +83,6 @@ def as_human_readable_list(_values: Iterable[str], /, *, last_sep: str = "&") ->
 
     output += f" {last_sep} {addition}"
     return output
-
-
-def get_cat_verification_key(*, force_refresh: bool = False) -> str:
-    """Get the verification key for a given service entity."""
-    if not force_refresh and cat_service_settings.VERIFICATION_KEY != "":
-        return cat_service_settings.VERIFICATION_KEY
-
-    url = cat_service_settings.VERIFICATION_KEY_URL
-    data = {
-        "type": cat_service_settings.SERVICE_TYPE,
-        "name": cat_service_settings.SERVICE_NAME,
-    }
-
-    response = httpx.post(url, json=data, follow_redirects=True)  # TODO: Add authentication
-    response.raise_for_status()
-
-    response_data = response.json()
-    cat_service_settings.VERIFICATION_KEY = response_data["verification_key"]
-    return cat_service_settings.VERIFICATION_KEY
 
 
 def get_required_cat_headers() -> set[str]:

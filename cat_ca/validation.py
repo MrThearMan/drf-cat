@@ -5,20 +5,10 @@ from cryptography import x509
 from cat_ca.settings import cat_ca_settings
 
 __all__ = [
-    "validate_csr",
     "validate_client_certificate",
     "get_basic_constraints",
     "get_key_usage",
 ]
-
-
-def validate_csr(csr: x509.CertificateSigningRequest) -> None:
-    if not csr.is_signature_valid:  # pragma: no cover
-        msg = "CSR signature is invalid."
-        raise ValueError(msg)
-
-    # TODO: Validate `csr.subject` exists.
-    # TODO: Possible challenges?
 
 
 def validate_client_certificate(client_certificate: x509.Certificate) -> None:
