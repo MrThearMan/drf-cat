@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import sys
 from typing import Any, Callable, ClassVar, Iterable, NamedTuple, TypeAlias
 
@@ -8,18 +10,15 @@ else:
 
 __all__ = [
     "Any",
+    "Callable",
+    "ClassVar",
+    "HeaderKey",
+    "HeaderValue",
     "Iterable",
     "NamedTuple",
     "Self",
-    "Validator",
-    "Callable",
     "TypeAlias",
-    "HeaderKey",
-    "ClassVar",
-    "HeaderValue",
 ]
-
-Validator: TypeAlias = Callable[[str], Any]
 
 HeaderKey: TypeAlias = str
 """Will be in Header-Case."""

@@ -1,12 +1,18 @@
-import datetime
+from __future__ import annotations
 
-from cryptography import x509
-from cryptography.hazmat.primitives.asymmetric import ed25519
+import datetime
+from typing import TYPE_CHECKING
+
 from django.core.exceptions import ImproperlyConfigured
 from django.test.signals import setting_changed
 from settings_holder import SettingsHolder, reload_settings
 
 from cat_common.typing import Any, Callable, NamedTuple
+
+if TYPE_CHECKING:
+    from cryptography import x509
+    from cryptography.hazmat.primitives.asymmetric import ed25519
+
 
 __all__ = [
     "cat_ca_settings",
@@ -17,8 +23,6 @@ SETTING_NAME: str = "CAT_SETTINGS"
 
 
 class DefaultSettings(NamedTuple):
-    CA_NAME: str = ""
-    """Name of the CA."""
     CA_ORGANIZATION: str = ""
     """Name of the CA Organization."""
     CAT_ROOT_KEY: str = ""
@@ -48,7 +52,6 @@ def validate_required(name: str) -> Callable[[Any], None]:
 
 
 validators: dict[str, Callable[[Any], None]] = {
-    "CA_NAME": validate_required("CA_NAME"),
     "CAT_ROOT_KEY": validate_required("CAT_ROOT_KEY"),
 }
 

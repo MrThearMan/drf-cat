@@ -1,10 +1,17 @@
-from cryptography import x509
-from cryptography.hazmat.primitives.asymmetric import ed25519
+from __future__ import annotations
+
+from typing import TYPE_CHECKING
+
 from django.core.exceptions import ImproperlyConfigured
 from django.test.signals import setting_changed
 from settings_holder import SettingsHolder, reload_settings
 
 from cat_common.typing import Any, Callable, NamedTuple
+
+if TYPE_CHECKING:
+    from cryptography import x509
+    from cryptography.hazmat.primitives.asymmetric import ed25519
+
 
 __all__ = [
     "cat_service_settings",

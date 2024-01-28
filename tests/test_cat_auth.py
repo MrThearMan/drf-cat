@@ -10,6 +10,7 @@ from rest_framework.reverse import reverse
 
 from cat_ca.cryptography import create_cat_creation_key, create_cat_verification_key, get_ca_certificate
 from cat_ca.settings import cat_ca_settings
+from cat_common.settings import cat_common_settings
 from cat_service.cryptography import create_cat_header, get_cat_verification_key
 from tests.factories import ServiceEntityFactory, UserFactory
 from tests.helpers import use_test_client_for_http
@@ -70,7 +71,8 @@ def test_cat__authenticate_user(client: Client, settings):
     certificate = get_ca_certificate()
 
     settings.CAT_SETTINGS = {
-        "CAT_ROOT_KEY": "foo",
+        "CA_NAME": cat_common_settings.CA_NAME,
+        "CAT_ROOT_KEY": cat_ca_settings.CAT_ROOT_KEY,
         "SERVICE_TYPE": service_entity.type.name,
         "SERVICE_NAME": service_entity.name,
         "VERIFICATION_KEY_URL": reverse("cat_ca:cat_verification_key"),
@@ -100,7 +102,8 @@ def test_cat__authenticate_user__cat_headers_in_bytes(client: Client, settings):
     certificate = get_ca_certificate()
 
     settings.CAT_SETTINGS = {
-        "CAT_ROOT_KEY": "foo",
+        "CA_NAME": cat_common_settings.CA_NAME,
+        "CAT_ROOT_KEY": cat_ca_settings.CAT_ROOT_KEY,
         "SERVICE_TYPE": service_entity.type.name,
         "SERVICE_NAME": service_entity.name,
         "VERIFICATION_KEY_URL": reverse("cat_ca:cat_verification_key"),
@@ -130,7 +133,8 @@ def test_cat__authenticate_user__extra_info(client: Client, settings):
     certificate = get_ca_certificate()
 
     settings.CAT_SETTINGS = {
-        "CAT_ROOT_KEY": "foo",
+        "CA_NAME": cat_common_settings.CA_NAME,
+        "CAT_ROOT_KEY": cat_ca_settings.CAT_ROOT_KEY,
         "SERVICE_TYPE": service_entity.type.name,
         "SERVICE_NAME": service_entity.name,
         "VERIFICATION_KEY_URL": reverse("cat_ca:cat_verification_key"),
@@ -171,7 +175,8 @@ def test_cat__authenticate_user__missing_service_type_setting(settings):
     certificate = get_ca_certificate()
 
     settings.CAT_SETTINGS = {
-        "CAT_ROOT_KEY": "foo",
+        "CA_NAME": cat_common_settings.CA_NAME,
+        "CAT_ROOT_KEY": cat_ca_settings.CAT_ROOT_KEY,
         "SERVICE_NAME": service_entity.name,
         "VERIFICATION_KEY_URL": reverse("cat_ca:cat_verification_key"),
         "CERTIFICATE_URL": reverse("cat_ca:cat_certificate"),
@@ -189,7 +194,8 @@ def test_cat__authenticate_user__missing_service_name_setting(settings):
     certificate = get_ca_certificate()
 
     settings.CAT_SETTINGS = {
-        "CAT_ROOT_KEY": "foo",
+        "CA_NAME": cat_common_settings.CA_NAME,
+        "CAT_ROOT_KEY": cat_ca_settings.CAT_ROOT_KEY,
         "SERVICE_TYPE": service_entity.type.name,
         "VERIFICATION_KEY_URL": reverse("cat_ca:cat_verification_key"),
         "CERTIFICATE_URL": reverse("cat_ca:cat_certificate"),
@@ -207,7 +213,8 @@ def test_cat__authenticate_user__missing_verification_key_url_setting(settings):
     certificate = get_ca_certificate()
 
     settings.CAT_SETTINGS = {
-        "CAT_ROOT_KEY": "foo",
+        "CA_NAME": cat_common_settings.CA_NAME,
+        "CAT_ROOT_KEY": cat_ca_settings.CAT_ROOT_KEY,
         "SERVICE_TYPE": service_entity.type.name,
         "SERVICE_NAME": service_entity.name,
         "CERTIFICATE_URL": reverse("cat_ca:cat_certificate"),
@@ -225,7 +232,8 @@ def test_cat__authenticate_user__missing_certificate_url(settings):
     certificate = get_ca_certificate()
 
     settings.CAT_SETTINGS = {
-        "CAT_ROOT_KEY": "foo",
+        "CA_NAME": cat_common_settings.CA_NAME,
+        "CAT_ROOT_KEY": cat_ca_settings.CAT_ROOT_KEY,
         "SERVICE_TYPE": service_entity.type.name,
         "SERVICE_NAME": service_entity.name,
         "VERIFICATION_KEY_URL": reverse("cat_ca:cat_verification_key"),
@@ -243,7 +251,8 @@ def test_cat__authenticate_user__missing_ca_certificate(settings, client: Client
     get_ca_certificate()
 
     settings.CAT_SETTINGS = {
-        "CAT_ROOT_KEY": "foo",
+        "CA_NAME": cat_common_settings.CA_NAME,
+        "CAT_ROOT_KEY": cat_ca_settings.CAT_ROOT_KEY,
         "SERVICE_TYPE": service_entity.type.name,
         "SERVICE_NAME": service_entity.name,
         "VERIFICATION_KEY_URL": reverse("cat_ca:cat_verification_key"),
@@ -261,7 +270,8 @@ def test_cat__authenticate_user__missing_ca_private_key(settings, client: Client
     certificate = get_ca_certificate()
 
     settings.CAT_SETTINGS = {
-        "CAT_ROOT_KEY": "foo",
+        "CA_NAME": cat_common_settings.CA_NAME,
+        "CAT_ROOT_KEY": cat_ca_settings.CAT_ROOT_KEY,
         "SERVICE_TYPE": service_entity.type.name,
         "SERVICE_NAME": service_entity.name,
         "VERIFICATION_KEY_URL": reverse("cat_ca:cat_verification_key"),
@@ -279,7 +289,8 @@ def test_cat__authenticate_user__dont_request_new_if_set(client: Client, setting
     certificate = get_ca_certificate()
 
     settings.CAT_SETTINGS = {
-        "CAT_ROOT_KEY": "foo",
+        "CA_NAME": cat_common_settings.CA_NAME,
+        "CAT_ROOT_KEY": cat_ca_settings.CAT_ROOT_KEY,
         "SERVICE_TYPE": service_entity.type.name,
         "SERVICE_NAME": service_entity.name,
         "VERIFICATION_KEY_URL": reverse("cat_ca:cat_verification_key"),
@@ -306,7 +317,8 @@ def test_cat__authenticate_user__do_request_new_if_forced(client: Client, settin
     certificate = get_ca_certificate()
 
     settings.CAT_SETTINGS = {
-        "CAT_ROOT_KEY": "foo",
+        "CA_NAME": cat_common_settings.CA_NAME,
+        "CAT_ROOT_KEY": cat_ca_settings.CAT_ROOT_KEY,
         "SERVICE_TYPE": service_entity.type.name,
         "SERVICE_NAME": service_entity.name,
         "VERIFICATION_KEY_URL": reverse("cat_ca:cat_verification_key"),
@@ -359,7 +371,8 @@ def test_cat__authenticate_user__invalid_auth_header(client: Client, settings, h
     certificate = get_ca_certificate()
 
     settings.CAT_SETTINGS = {
-        "CAT_ROOT_KEY": "foo",
+        "CA_NAME": cat_common_settings.CA_NAME,
+        "CAT_ROOT_KEY": cat_ca_settings.CAT_ROOT_KEY,
         "SERVICE_TYPE": service_entity.type.name,
         "SERVICE_NAME": service_entity.name,
         "VERIFICATION_KEY_URL": reverse("cat_ca:cat_verification_key"),
@@ -384,7 +397,8 @@ def test_cat__authenticate_user__invalid_cat(client: Client, settings):
     certificate = get_ca_certificate()
 
     settings.CAT_SETTINGS = {
-        "CAT_ROOT_KEY": "foo",
+        "CA_NAME": cat_common_settings.CA_NAME,
+        "CAT_ROOT_KEY": cat_ca_settings.CAT_ROOT_KEY,
         "SERVICE_TYPE": service_entity.type.name,
         "SERVICE_NAME": service_entity.name,
         "VERIFICATION_KEY_URL": reverse("cat_ca:cat_verification_key"),
@@ -414,7 +428,8 @@ def test_cat__authenticate_user__invalid_service_name(client: Client, settings):
     certificate = get_ca_certificate()
 
     settings.CAT_SETTINGS = {
-        "CAT_ROOT_KEY": "foo",
+        "CA_NAME": cat_common_settings.CA_NAME,
+        "CAT_ROOT_KEY": cat_ca_settings.CAT_ROOT_KEY,
         "SERVICE_TYPE": service_entity.type.name,
         "SERVICE_NAME": service_entity.name,
         "VERIFICATION_KEY_URL": reverse("cat_ca:cat_verification_key"),
@@ -444,7 +459,8 @@ def test_cat__authenticate_user__missing_service_name(client: Client, settings):
     certificate = get_ca_certificate()
 
     settings.CAT_SETTINGS = {
-        "CAT_ROOT_KEY": "foo",
+        "CA_NAME": cat_common_settings.CA_NAME,
+        "CAT_ROOT_KEY": cat_ca_settings.CAT_ROOT_KEY,
         "SERVICE_TYPE": service_entity.type.name,
         "SERVICE_NAME": service_entity.name,
         "VERIFICATION_KEY_URL": reverse("cat_ca:cat_verification_key"),
@@ -473,7 +489,8 @@ def test_cat__authenticate_user__invalid_identity(client: Client, settings):
     certificate = get_ca_certificate()
 
     settings.CAT_SETTINGS = {
-        "CAT_ROOT_KEY": "foo",
+        "CA_NAME": cat_common_settings.CA_NAME,
+        "CAT_ROOT_KEY": cat_ca_settings.CAT_ROOT_KEY,
         "SERVICE_TYPE": service_entity.type.name,
         "SERVICE_NAME": service_entity.name,
         "VERIFICATION_KEY_URL": reverse("cat_ca:cat_verification_key"),
@@ -502,7 +519,8 @@ def test_cat__authenticate_user__missing_identity(client: Client, settings):
     certificate = get_ca_certificate()
 
     settings.CAT_SETTINGS = {
-        "CAT_ROOT_KEY": "foo",
+        "CA_NAME": cat_common_settings.CA_NAME,
+        "CAT_ROOT_KEY": cat_ca_settings.CAT_ROOT_KEY,
         "SERVICE_TYPE": service_entity.type.name,
         "SERVICE_NAME": service_entity.name,
         "VERIFICATION_KEY_URL": reverse("cat_ca:cat_verification_key"),
@@ -532,7 +550,8 @@ def test_cat__authenticate_user__invalid_timestamp(client: Client, settings):
     certificate = get_ca_certificate()
 
     settings.CAT_SETTINGS = {
-        "CAT_ROOT_KEY": "foo",
+        "CA_NAME": cat_common_settings.CA_NAME,
+        "CAT_ROOT_KEY": cat_ca_settings.CAT_ROOT_KEY,
         "SERVICE_TYPE": service_entity.type.name,
         "SERVICE_NAME": service_entity.name,
         "VERIFICATION_KEY_URL": reverse("cat_ca:cat_verification_key"),
@@ -563,7 +582,8 @@ def test_cat__authenticate_user__invalid_valid_until(client: Client, settings):
     certificate = get_ca_certificate()
 
     settings.CAT_SETTINGS = {
-        "CAT_ROOT_KEY": "foo",
+        "CA_NAME": cat_common_settings.CA_NAME,
+        "CAT_ROOT_KEY": cat_ca_settings.CAT_ROOT_KEY,
         "SERVICE_TYPE": service_entity.type.name,
         "SERVICE_NAME": service_entity.name,
         "VERIFICATION_KEY_URL": reverse("cat_ca:cat_verification_key"),
@@ -594,7 +614,8 @@ def test_cat__authenticate_user__expired_valid_until(client: Client, settings):
     certificate = get_ca_certificate()
 
     settings.CAT_SETTINGS = {
-        "CAT_ROOT_KEY": "foo",
+        "CA_NAME": cat_common_settings.CA_NAME,
+        "CAT_ROOT_KEY": cat_ca_settings.CAT_ROOT_KEY,
         "SERVICE_TYPE": service_entity.type.name,
         "SERVICE_NAME": service_entity.name,
         "VERIFICATION_KEY_URL": reverse("cat_ca:cat_verification_key"),
@@ -625,7 +646,8 @@ def test_cat__authenticate_user__invalid_cat_header_chars(client: Client, settin
     certificate = get_ca_certificate()
 
     settings.CAT_SETTINGS = {
-        "CAT_ROOT_KEY": "foo",
+        "CA_NAME": cat_common_settings.CA_NAME,
+        "CAT_ROOT_KEY": cat_ca_settings.CAT_ROOT_KEY,
         "SERVICE_TYPE": service_entity.type.name,
         "SERVICE_NAME": service_entity.name,
         "VERIFICATION_KEY_URL": reverse("cat_ca:cat_verification_key"),
@@ -656,7 +678,8 @@ def test_cat__authenticate_user__unrecognized_cat_header(client: Client, setting
     certificate = get_ca_certificate()
 
     settings.CAT_SETTINGS = {
-        "CAT_ROOT_KEY": "foo",
+        "CA_NAME": cat_common_settings.CA_NAME,
+        "CAT_ROOT_KEY": cat_ca_settings.CAT_ROOT_KEY,
         "SERVICE_TYPE": service_entity.type.name,
         "SERVICE_NAME": service_entity.name,
         "VERIFICATION_KEY_URL": reverse("cat_ca:cat_verification_key"),
@@ -687,7 +710,8 @@ def test_cat__authenticate_user__validator_not_found(client: Client, settings):
     certificate = get_ca_certificate()
 
     settings.CAT_SETTINGS = {
-        "CAT_ROOT_KEY": "foo",
+        "CA_NAME": cat_common_settings.CA_NAME,
+        "CAT_ROOT_KEY": cat_ca_settings.CAT_ROOT_KEY,
         "SERVICE_TYPE": service_entity.type.name,
         "SERVICE_NAME": service_entity.name,
         "VERIFICATION_KEY_URL": reverse("cat_ca:cat_verification_key"),

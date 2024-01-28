@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import datetime
 
 from cryptography import x509
@@ -6,6 +8,7 @@ from cryptography.hazmat.primitives.asymmetric import ed25519
 
 from cat_ca.settings import cat_ca_settings
 from cat_common.cryptography import hmac
+from cat_common.settings import cat_common_settings
 
 __all__ = [
     "create_client_certificate",
@@ -25,19 +28,18 @@ def create_cat_creation_key(*, identity: str, service: str) -> str:
 
 
 def get_ca_certificate() -> x509.Certificate:
-    if cat_ca_settings.CA_CERTIFICATE is not None:  # pragma: no cover
-        # TODO: Validate that certificate is still valid.
-        return cat_ca_settings.CA_CERTIFICATE
+    now = datetime.datetime.now(tz=datetime.timezone.utc)
+    if cat_ca_settings.CA_CERTIFICATE is not None and cat_ca_settings.CA_CERTIFICATE.not_valid_after_utc > now:
+        return cat_ca_settings.CA_CERTIFICATE  # pragma: no cover
 
     # Generate a new private key if one does not exist
     if cat_ca_settings.CA_PRIVATE_KEY is None:
         cat_ca_settings.CA_PRIVATE_KEY = ed25519.Ed25519PrivateKey.generate()
 
-    subject: list[x509.NameAttribute] = [x509.NameAttribute(NameOID.COMMON_NAME, cat_ca_settings.CA_NAME)]
+    subject: list[x509.NameAttribute] = [x509.NameAttribute(NameOID.COMMON_NAME, cat_common_settings.CA_NAME)]
     if cat_ca_settings.CA_ORGANIZATION:  # pragma: no cover
         subject.append(x509.NameAttribute(NameOID.ORGANIZATION_NAME, cat_ca_settings.CA_ORGANIZATION))
 
-    now = datetime.datetime.now(tz=datetime.timezone.utc)
     cat_ca_settings.CA_CERTIFICATE = (
         x509.CertificateBuilder()
         .subject_name(x509.Name(subject))

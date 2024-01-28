@@ -29,7 +29,7 @@ from cat_service.validation import (
 if TYPE_CHECKING:
     from rest_framework.request import Request
 
-    from cat_common.typing import Any, ClassVar, HeaderKey, HeaderValue, Validator
+    from cat_common.typing import Any, Callable, ClassVar, HeaderKey, HeaderValue
 
 User = get_user_model()
 
@@ -60,7 +60,7 @@ class CATAuthentication(BaseAuthentication):
 
     auth_scheme: str = cat_service_settings.AUTH_SCHEME
 
-    header_validators: ClassVar[dict[str, Validator]] = {
+    header_validators: ClassVar[dict[str, Callable[[str], Any]]] = {
         known_headers.IDENTITY: validate_identity,
         known_headers.SERVICE_NAME: validate_service_name,
         known_headers.TIMESTAMP: validate_timestamp,

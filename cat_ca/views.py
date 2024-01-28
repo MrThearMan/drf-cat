@@ -2,11 +2,11 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+from rest_framework.exceptions import ValidationError
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from cat_ca.authentication import CertificatePermission
 from cat_ca.cryptography import (
     create_cat_creation_key,
     create_cat_verification_key,
@@ -15,6 +15,7 @@ from cat_ca.cryptography import (
 )
 from cat_ca.exceptions import ServiceEntityNotFound, ServiceEntityTypeNotFound
 from cat_ca.models import ServiceEntity, ServiceEntityType
+from cat_ca.permissions import CertificatePermission
 from cat_ca.serializers import (
     CATCreationKeyInputSerializer,
     CATCreationKeyOutputSerializer,
@@ -56,7 +57,7 @@ class CertificateView(APIView):
         try:
             certificate = create_client_certificate(input_data["csr"])
         except ValueError as error:
-            return Response(data={"detail": error.args[0]}, status=400)
+            raise ValidationError(detail=error.args[0]) from error
 
         output_data = {"certificate": serialize_certificate(certificate)}
         response_output = CSROutputSerializer(data=output_data)

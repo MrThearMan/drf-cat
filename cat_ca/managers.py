@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from django.db import models
 
 from cat_ca.querysets import ServiceEntityQuerySet, ServiceEntityTypeQuerySet

@@ -1,9 +1,16 @@
-from typing import Any
+from __future__ import annotations
 
-from cryptography import x509
+from typing import TYPE_CHECKING
+
 from rest_framework import serializers
 
 from cat_common.cryptography import deserialize_csr
+
+if TYPE_CHECKING:
+    from cryptography import x509
+
+    from cat_common.typing import Any
+
 
 __all__ = [
     "CATVerificationKeyInputSerializer",

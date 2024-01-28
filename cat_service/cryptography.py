@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import datetime
 import json
 
 import httpx
@@ -9,6 +10,7 @@ from cryptography.hazmat.primitives.asymmetric import ed25519
 
 from cat_common.cryptography import deserialize_certificate, hmac, serialize_certificate, serialize_csr
 from cat_service.settings import cat_service_settings
+from cat_service.validation import validate_certificate
 
 __all__ = [
     "create_cat",
@@ -28,11 +30,7 @@ def get_cat_verification_key(*, force_refresh: bool = False) -> str:
         "type": cat_service_settings.SERVICE_TYPE,
         "name": cat_service_settings.SERVICE_NAME,
     }
-
-    certificate = cat_service_settings.SERVICE_CERTIFICATE
-    if certificate is None:
-        certificate = get_certificate()
-
+    certificate = get_certificate()
     headers = {"Authorization": f"Certificate {serialize_certificate(certificate)}"}
     response = httpx.post(url, json=data, follow_redirects=True, headers=headers)
     response.raise_for_status()
@@ -61,9 +59,13 @@ def create_cat_header(*, identity: str, service_name: str, **kwargs: str) -> str
 
 
 def get_certificate(*, force_refresh: bool = False) -> x509.Certificate:
-    if not force_refresh and cat_service_settings.SERVICE_CERTIFICATE is not None:  # pragma: no cover
-        # TODO: Validate that certificate is still valid.
-        return cat_service_settings.SERVICE_CERTIFICATE
+    now = datetime.datetime.now(tz=datetime.timezone.utc)
+    if (
+        not force_refresh
+        and cat_service_settings.SERVICE_CERTIFICATE is not None
+        and cat_service_settings.SERVICE_CERTIFICATE.not_valid_after_utc > now
+    ):
+        return cat_service_settings.SERVICE_CERTIFICATE  # pragma: no cover
 
     csr = create_csr()
     url = cat_service_settings.CERTIFICATE_URL
@@ -73,8 +75,9 @@ def get_certificate(*, force_refresh: bool = False) -> x509.Certificate:
     response.raise_for_status()
 
     response_data = response.json()
-    # TODO: Validate that the certificate was signed by what we expect.
-    cat_service_settings.SERVICE_CERTIFICATE = deserialize_certificate(response_data["certificate"])
+    certificate = deserialize_certificate(response_data["certificate"])
+    validate_certificate(certificate)
+    cat_service_settings.SERVICE_CERTIFICATE = certificate
     return cat_service_settings.SERVICE_CERTIFICATE
 
 
