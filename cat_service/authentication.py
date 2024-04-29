@@ -78,7 +78,7 @@ class CATAuthentication(BaseAuthentication):
 
         try:
             user = self.get_user(cat_info)
-        except Exception as error:  # noqa: BLE001 pragma: no cover
+        except Exception as error:  # pragma: no cover
             msg = __("User does not exist.")
             raise AuthenticationFailed(msg, code=error_codes.USER_DOES_NOT_EXIST) from error
 
@@ -120,7 +120,7 @@ class CATAuthentication(BaseAuthentication):
     def validate_cat_token(self, token: str, cat_headers: dict[HeaderKey, HeaderValue]) -> None:
         try:
             cat = create_cat(**{from_cat_header_name(key): value for key, value in cat_headers.items()})
-        except Exception as error:  # noqa: BLE001 pragma: no cover
+        except Exception as error:  # pragma: no cover
             raise AuthenticationFailed(str(error), code=error_codes.SERVICE_SETUP_ERROR) from error
 
         if token != cat:

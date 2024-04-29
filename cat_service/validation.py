@@ -34,7 +34,7 @@ __all__ = [
 def validate_identity(identity: str) -> Any:
     try:
         return cat_common_settings.IDENTITY_CONVERTER(identity.strip())
-    except Exception as error:  # noqa: BLE001
+    except Exception as error:
         msg = __("Invalid identity value: '%(identity)s'. Could not convert to required type.")
         msg %= {"identity": identity}
         raise AuthenticationFailed(msg, code=error_codes.INVALID_IDENTITY) from error
