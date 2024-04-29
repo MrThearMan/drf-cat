@@ -44,7 +44,7 @@ class CertificatePermission(BasePermission):
 
         try:
             certificate = deserialize_certificate(token)
-        except Exception as error:  # noqa: BLE001 pragma: no cover
+        except Exception as error:  # pragma: no cover
             msg = __("Invalid certificate.")
             raise AuthenticationFailed(msg, code=error_codes.INVALID_CERTIFICATE) from error
 
