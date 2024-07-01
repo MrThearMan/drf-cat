@@ -57,7 +57,6 @@ def get_ca_certificate() -> x509.Certificate:
                 crl_sign=True,
                 key_cert_sign=True,
                 key_encipherment=True,
-                #
                 digital_signature=False,
                 content_commitment=False,
                 data_encipherment=False,
@@ -100,7 +99,6 @@ def create_client_certificate(csr: x509.CertificateSigningRequest) -> x509.Certi
         .add_extension(
             x509.KeyUsage(
                 digital_signature=True,
-                #
                 crl_sign=False,
                 key_cert_sign=False,
                 key_encipherment=False,
