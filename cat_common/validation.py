@@ -13,9 +13,9 @@ if TYPE_CHECKING:
 
 
 __all__ = [
-    "validate_valid_period",
     "validate_basic_constraints",
     "validate_key_usage",
+    "validate_valid_period",
 ]
 
 

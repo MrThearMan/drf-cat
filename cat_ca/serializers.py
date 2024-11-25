@@ -13,10 +13,10 @@ if TYPE_CHECKING:
 
 
 __all__ = [
-    "CATVerificationKeyInputSerializer",
-    "CATVerificationKeyOutputSerializer",
     "CATCreationKeyInputSerializer",
     "CATCreationKeyOutputSerializer",
+    "CATVerificationKeyInputSerializer",
+    "CATVerificationKeyOutputSerializer",
     "CSRInputSerializer",
     "CSROutputSerializer",
 ]

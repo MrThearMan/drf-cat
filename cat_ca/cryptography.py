@@ -11,9 +11,9 @@ from cat_common.cryptography import hmac
 from cat_common.settings import cat_common_settings
 
 __all__ = [
-    "create_client_certificate",
     "create_cat_creation_key",
     "create_cat_verification_key",
+    "create_client_certificate",
     "get_ca_certificate",
 ]
 

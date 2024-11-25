@@ -10,12 +10,12 @@ if TYPE_CHECKING:
 
 
 __all__ = [
-    "to_cat_header_name",
-    "snake_case_to_header_case",
-    "header_case_to_snake_case",
     "as_human_readable_list",
     "get_required_cat_headers",
     "get_valid_cat_headers",
+    "header_case_to_snake_case",
+    "snake_case_to_header_case",
+    "to_cat_header_name",
 ]
 
 
