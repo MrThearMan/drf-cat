@@ -5,8 +5,8 @@ from django.db import models
 from cat_ca.querysets import ServiceEntityQuerySet, ServiceEntityTypeQuerySet
 
 __all__ = [
-    "ServiceEntityTypeManager",
     "ServiceEntityManager",
+    "ServiceEntityTypeManager",
 ]
 
 

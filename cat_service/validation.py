@@ -19,15 +19,15 @@ if TYPE_CHECKING:
 
 
 __all__ = [
+    "validate_certificate",
     "validate_identity",
+    "validate_issuer",
+    "validate_nonce",
+    "validate_public_key",
     "validate_service_name",
+    "validate_subject",
     "validate_timestamp",
     "validate_valid_until",
-    "validate_nonce",
-    "validate_issuer",
-    "validate_subject",
-    "validate_public_key",
-    "validate_certificate",
 ]
 
 
