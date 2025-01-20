@@ -69,11 +69,11 @@ factory-boy = "3.3.1"
 mkdocs = "1.6.1"
 pymdown-extensions = "10.14"
 mkdocs-mermaid2-plugin = "1.2.1"
-pre-commit = "4.0.1"
+pre-commit = "4.1.0"
 
 [tool.poetry.group.lint.dependencies]
 mypy = "1.14.1"
-django-stubs = "5.1.1"
+django-stubs = "5.1.2"
 djangorestframework-stubs = "3.15.2"
 
 [tool.ruff]
