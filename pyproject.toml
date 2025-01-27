@@ -61,13 +61,13 @@ typing-extensions = { version = ">=4.7.1", python = "<3.11" }
 pytest = "8.3.4"
 coverage = "7.6.10"
 pytest-django = "4.9.0"
-tox = "4.23.2"
+tox = "4.24.1"
 tox-gh-actions = "3.2.0"
 factory-boy = "3.3.1"
 
 [tool.poetry.group.docs.dependencies]
 mkdocs = "1.6.1"
-pymdown-extensions = "10.14"
+pymdown-extensions = "10.14.1"
 mkdocs-mermaid2-plugin = "1.2.1"
 pre-commit = "4.1.0"
 
