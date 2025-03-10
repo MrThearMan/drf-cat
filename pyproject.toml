@@ -61,7 +61,7 @@ typing-extensions = { version = ">=4.7.1", python = "<3.11" }
 pytest = "8.3.5"
 coverage = "7.6.12"
 pytest-django = "4.10.0"
-tox = "4.24.1"
+tox = "4.24.2"
 tox-gh-actions = "3.3.0"
 factory-boy = "3.3.3"
 
