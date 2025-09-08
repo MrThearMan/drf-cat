@@ -23,6 +23,12 @@ SETTING_NAME: str = "CAT_SETTINGS"
 
 
 class DefaultSettings(NamedTuple):
+    CA_NAME: str = ""
+    """Name of the Certificate Authority that signs certificates."""
+    PSEUDO_RANDOM_FUNCTION: str = "sha256"
+    """Pseudo random function to use for generating keys."""
+    IDENTITY_CONVERTER: Callable[[str], Any] = str
+    """Function to convert identity value to the required type."""
     CA_ORGANIZATION: str = ""
     """Name of the CA Organization."""
     CAT_ROOT_KEY: str = ""
@@ -37,6 +43,28 @@ class DefaultSettings(NamedTuple):
     """The CA certificate."""
     CA_PRIVATE_KEY: ed25519.Ed25519PrivateKey | None = None
     """The CA private key."""
+    VERIFICATION_KEY: str = ""
+    """Verification key for this service."""
+    VERIFICATION_KEY_URL: str = ""
+    """URL where service verification key can be fetched from."""
+    CERTIFICATE_URL: str = ""
+    """URL where service certificate can be fetched from."""
+    SERVICE_TYPE: str = ""
+    """Type this service is."""
+    SERVICE_NAME: str = ""
+    """Name of this service."""
+    SERVICE_ORGANIZATION: str = ""
+    """Name of the organization this service belongs to."""
+    AUTH_SCHEME: str = "CAT"
+    """Auth scheme to use in Authorization header."""
+    ADDITIONAL_VALID_CAT_HEADERS: list[str] = []
+    """Additional valid CAT headers in form: `CAT-{Name-In-Header-Case}`."""
+    ADDITIONAL_REQUIRED_CAT_HEADERS: list[str] = []
+    """Additional required CAT headers: in form `CAT-{Name-In-Header-Case}`"""
+    SERVICE_CERTIFICATE: x509.Certificate | None = None
+    """The service certificate."""
+    SERVICE_PRIVATE_KEY: ed25519.Ed25519PrivateKey | None = None
+    """The service private key."""
 
 
 DEFAULTS = DefaultSettings()._asdict()

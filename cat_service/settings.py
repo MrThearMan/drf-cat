@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import datetime
 from typing import TYPE_CHECKING
 
 from django.core.exceptions import ImproperlyConfigured
@@ -22,6 +23,26 @@ SETTING_NAME: str = "CAT_SETTINGS"
 
 
 class DefaultSettings(NamedTuple):
+    CA_NAME: str = ""
+    """Name of the Certificate Authority that signs certificates."""
+    PSEUDO_RANDOM_FUNCTION: str = "sha256"
+    """Pseudo random function to use for generating keys."""
+    IDENTITY_CONVERTER: Callable[[str], Any] = str
+    """Function to convert identity value to the required type."""
+    CA_ORGANIZATION: str = ""
+    """Name of the CA Organization."""
+    CAT_ROOT_KEY: str = ""
+    """Root key for CAT. Should be kept secret."""
+    CA_CERTIFICATE_VALIDITY_PERIOD: datetime.timedelta = datetime.timedelta(days=10)
+    """How long the CA certificate is valid for."""
+    CLIENT_CERTIFICATE_VALIDITY_PERIOD: datetime.timedelta = datetime.timedelta(days=10)
+    """How long the client certificate is valid for."""
+    LEEWAY: datetime.timedelta = datetime.timedelta(seconds=1)
+    """How much leeway to give for validity before period."""
+    CA_CERTIFICATE: x509.Certificate | None = None
+    """The CA certificate."""
+    CA_PRIVATE_KEY: ed25519.Ed25519PrivateKey | None = None
+    """The CA private key."""
     VERIFICATION_KEY: str = ""
     """Verification key for this service."""
     VERIFICATION_KEY_URL: str = ""
