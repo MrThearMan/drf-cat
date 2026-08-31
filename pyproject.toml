@@ -55,7 +55,7 @@ Django = ">=5.2.17"
 djangorestframework = ">=3.18.0"
 django-settings-holder = ">=0.1.0"
 httpx = ">=0.26.0"
-cryptography = { extras = ["ssh"], version = ">=50.0.0" }
+cryptography = { extras = ["ssh"], version = ">=50.0.1" }
 
 [tool.poetry.group.test.dependencies]
 pytest = "9.1.1"
@@ -66,7 +66,7 @@ factory-boy = "3.3.3"
 
 [tool.poetry.group.docs.dependencies]
 mkdocs = "1.6.1"
-pymdown-extensions = "11.0.1"
+pymdown-extensions = "11.0.2"
 mkdocs-mermaid2-plugin = "1.2.3"
 
 [tool.poetry.group.lint.dependencies]
