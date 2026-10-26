@@ -59,9 +59,9 @@ cryptography = { extras = ["ssh"], version = ">=50.0.2" }
 
 [tool.poetry.group.test.dependencies]
 pytest = "9.1.1"
-coverage = "7.16.2"
+coverage = "7.17.0"
 pytest-django = "4.14.0"
-nox = "2026.8.17"
+nox = "2026.10.20"
 factory-boy = "3.3.3"
 
 [tool.poetry.group.docs.dependencies]
