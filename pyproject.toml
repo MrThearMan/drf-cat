@@ -58,7 +58,7 @@ httpx = ">=0.26.0"
 cryptography = { extras = ["ssh"], version = ">=50.0.2" }
 
 [tool.poetry.group.test.dependencies]
-pytest = "9.1.1"
+pytest = "9.2.0"
 coverage = "7.17.0"
 pytest-django = "4.14.0"
 nox = "2026.10.20"
