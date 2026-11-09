@@ -51,7 +51,7 @@ packages = [
 ]
 
 [tool.poetry.dependencies]
-Django = ">=5.2.18"
+Django = ">=5.2.19"
 djangorestframework = ">=3.18.3"
 django-settings-holder = ">=0.1.0"
 httpx = ">=0.26.0"
@@ -59,7 +59,7 @@ cryptography = { extras = ["ssh"], version = ">=50.0.2" }
 
 [tool.poetry.group.test.dependencies]
 pytest = "9.2.0"
-coverage = "7.17.0"
+coverage = "7.17.2"
 pytest-django = "4.14.0"
 nox = "2026.10.20"
 factory-boy = "3.3.3"
